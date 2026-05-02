@@ -5,6 +5,7 @@ import com.elguennouni.mohassib.dto.LoginResponse;
 import com.elguennouni.mohassib.dto.RefreshTokenRequest;
 import com.elguennouni.mohassib.dto.RefreshTokenResponse;
 import com.elguennouni.mohassib.dto.RegisterRequest;
+import com.elguennouni.mohassib.dto.SessionResponse;
 import com.elguennouni.mohassib.dto.UserResponse;
 import com.elguennouni.mohassib.exception.InvalidTokenException;
 import com.elguennouni.mohassib.service.AuthService;
@@ -46,11 +47,11 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public UserResponse me(Authentication authentication) {
+    public SessionResponse me(Authentication authentication) {
         if (authentication == null || authentication.getPrincipal() == null) {
             throw new InvalidTokenException();
         }
         Long userId = (Long) authentication.getPrincipal();
-        return authService.getCurrentUser(userId);
+        return authService.getCurrentSession(userId);
     }
 }

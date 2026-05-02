@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { PublicHeader } from '../components/PublicHeader'
 
-type LocationState = { from?: { pathname?: string } } | null
+type LocationState = { from?: { pathname?: string }; justRegistered?: boolean } | null
+
+type ApiErrorBody = { message?: string; error?: string }
 
 export function LoginPage() {
   const { login } = useAuth()
@@ -15,20 +18,34 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  const state = location.state as LocationState
+  const justRegistered = state?.justRegistered === true
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setError(null)
     setSubmitting(true)
     try {
-      await login(email, password)
-      const state = location.state as LocationState
-      const redirectTo = state?.from?.pathname ?? '/tableau-de-bord'
-      navigate(redirectTo, { replace: true })
+      const result = await login(email, password)
+      if (result.company === null) {
+        navigate('/mon-entreprise/creation', { replace: true })
+      } else {
+        const redirectTo = state?.from?.pathname ?? '/tableau-de-bord'
+        navigate(redirectTo, { replace: true })
+      }
     } catch (err: unknown) {
-      const message =
-        err instanceof Error && err.message
-          ? 'Identifiants invalides. Veuillez reessayer.'
-          : 'Une erreur est survenue. Veuillez reessayer.'
+      let message = 'Une erreur est survenue. Veuillez reessayer.'
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status
+        const body = err.response?.data as ApiErrorBody | undefined
+        if (status === 401) {
+          message = body?.message ?? 'Identifiants invalides.'
+        } else if (status === 400 && body?.message) {
+          message = body.message
+        } else if (!err.response) {
+          message = 'Le serveur est injoignable. Verifiez votre connexion.'
+        }
+      }
       setError(message)
     } finally {
       setSubmitting(false)
@@ -40,6 +57,19 @@ export function LoginPage() {
       <PublicHeader />
       <main className="container" style={{ maxWidth: 420, padding: 'var(--space-8) var(--space-5)' }}>
         <h1 style={{ marginBottom: 'var(--space-5)' }}>Connexion</h1>
+
+        {justRegistered && (
+          <div
+            className="alert"
+            style={{
+              backgroundColor: '#e6f5ec',
+              border: '1px solid #b7dec6',
+              color: 'var(--color-success)',
+            }}
+          >
+            Votre compte a ete cree. Vous pouvez maintenant vous connecter.
+          </div>
+        )}
 
         {error && <div className="alert alert-error">{error}</div>}
 

@@ -22,8 +22,10 @@ export function AppHeader() {
         <nav style={{ display: 'flex', gap: 'var(--space-5)', flex: 1 }}>
           <NavLink to="/tableau-de-bord">Tableau de bord</NavLink>
           <NavLink to="/factures">Factures</NavLink>
+          <NavLink to="/clients">Clients</NavLink>
           <NavLink to="/paie">Paie</NavLink>
           <NavLink to="/tva">TVA</NavLink>
+          <NavLink to="/mon-entreprise">Mon entreprise</NavLink>
         </nav>
         <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
           {user && (

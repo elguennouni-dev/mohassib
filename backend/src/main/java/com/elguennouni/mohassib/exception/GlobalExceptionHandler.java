@@ -29,6 +29,36 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", ex.getMessage());
     }
 
+    @ExceptionHandler(CompanyAlreadyExistsException.class)
+    public ResponseEntity<Map<String, Object>> handleCompanyExists(CompanyAlreadyExistsException ex) {
+        return error(HttpStatus.CONFLICT, "COMPANY_ALREADY_EXISTS", ex.getMessage());
+    }
+
+    @ExceptionHandler(CompanyNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleCompanyNotFound(CompanyNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "COMPANY_NOT_FOUND", ex.getMessage());
+    }
+
+    @ExceptionHandler(ClientNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleClientNotFound(ClientNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "CLIENT_NOT_FOUND", ex.getMessage());
+    }
+
+    @ExceptionHandler(InvoiceNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleInvoiceNotFound(InvoiceNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidInvoiceStateException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidInvoiceState(InvalidInvoiceStateException ex) {
+        return error(HttpStatus.CONFLICT, "INVALID_INVOICE_STATE", ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidTvaRateException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidTvaRate(InvalidTvaRateException ex) {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_TVA_RATE", ex.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         List<Map<String, String>> details = ex.getBindingResult().getFieldErrors().stream()

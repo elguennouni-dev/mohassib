@@ -1,9 +1,11 @@
 package com.elguennouni.mohassib.service;
 
+import com.elguennouni.mohassib.dto.CompanyResponse;
 import com.elguennouni.mohassib.dto.LoginRequest;
 import com.elguennouni.mohassib.dto.LoginResponse;
 import com.elguennouni.mohassib.dto.RefreshTokenResponse;
 import com.elguennouni.mohassib.dto.RegisterRequest;
+import com.elguennouni.mohassib.dto.SessionResponse;
 import com.elguennouni.mohassib.dto.UserResponse;
 import com.elguennouni.mohassib.entity.User;
 import com.elguennouni.mohassib.exception.EmailAlreadyExistsException;
@@ -23,6 +25,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final CompanyService companyService;
 
     @Transactional
     public UserResponse register(RegisterRequest request) {
@@ -55,11 +58,16 @@ public class AuthService {
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail());
         String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail());
 
+        CompanyResponse company = companyService.findByUserId(user.getId())
+                .map(CompanyResponse::from)
+                .orElse(null);
+
         return new LoginResponse(
                 accessToken,
                 refreshToken,
                 jwtService.getAccessTokenTtlSeconds(),
-                UserResponse.from(user)
+                UserResponse.from(user),
+                company
         );
     }
 
@@ -81,9 +89,12 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public UserResponse getCurrentUser(Long userId) {
+    public SessionResponse getCurrentSession(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(InvalidTokenException::new);
-        return UserResponse.from(user);
+        CompanyResponse company = companyService.findByUserId(user.getId())
+                .map(CompanyResponse::from)
+                .orElse(null);
+        return new SessionResponse(UserResponse.from(user), company);
     }
 }

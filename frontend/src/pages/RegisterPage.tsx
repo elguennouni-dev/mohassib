@@ -1,7 +1,14 @@
 import { useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { PublicHeader } from '../components/PublicHeader'
+
+type ApiErrorBody = {
+  message?: string
+  error?: string
+  details?: Array<{ field: string; message: string }>
+}
 
 export function RegisterPage() {
   const { register } = useAuth()
@@ -27,8 +34,19 @@ export function RegisterPage() {
     try {
       await register(firstName, lastName, email, password)
       navigate('/connexion', { state: { justRegistered: true } })
-    } catch {
-      setError('Inscription impossible. Verifiez vos informations et reessayez.')
+    } catch (err: unknown) {
+      let message = 'Inscription impossible. Verifiez vos informations et reessayez.'
+      if (axios.isAxiosError(err)) {
+        const body = err.response?.data as ApiErrorBody | undefined
+        if (body?.details && body.details.length > 0) {
+          message = body.details.map((d) => d.message).join(' ')
+        } else if (body?.message) {
+          message = body.message
+        } else if (!err.response) {
+          message = 'Le serveur est injoignable. Verifiez votre connexion.'
+        }
+      }
+      setError(message)
     } finally {
       setSubmitting(false)
     }
