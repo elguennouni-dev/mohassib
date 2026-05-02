@@ -1,0 +1,8 @@
+package com.elguennouni.mohassib.dto;
+
+public record LoginResponse(
+        String accessToken,
+        String refreshToken,
+        long expiresIn,
+        UserResponse user
+) {}
