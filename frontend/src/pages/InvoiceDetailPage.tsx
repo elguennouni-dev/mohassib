@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import axios from 'axios'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader'
@@ -6,6 +6,7 @@ import { StatusBadge } from './InvoicesListPage'
 import {
   cancelInvoice,
   deleteInvoice,
+  downloadInvoicePdf,
   formatDateFr,
   formatMoneyMAD,
   getInvoice,
@@ -22,6 +23,8 @@ export function InvoiceDetailPage() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [sendModalOpen, setSendModalOpen] = useState(false)
 
   const load = async () => {
     if (invoiceId === null) return
@@ -46,22 +49,6 @@ export function InvoiceDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoiceId])
 
-  const handleSend = async () => {
-    if (!invoice) return
-    if (!window.confirm(`Marquer la facture ${invoice.invoiceNumber} comme envoyee ? Cette action est irreversible.`)) {
-      return
-    }
-    setActionLoading(true)
-    try {
-      const updated = await sendInvoice(invoice.id)
-      setInvoice(updated)
-    } catch (err: unknown) {
-      window.alert(extractErrorMessage(err, "Impossible d'envoyer la facture."))
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
   const handleCancel = async () => {
     if (!invoice) return
     if (!window.confirm(`Annuler la facture ${invoice.invoiceNumber} ?`)) {
@@ -73,6 +60,18 @@ export function InvoiceDetailPage() {
       setInvoice(updated)
     } catch (err: unknown) {
       window.alert(extractErrorMessage(err, "Impossible d'annuler la facture."))
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleDownloadPdf = async () => {
+    if (!invoice) return
+    setActionLoading(true)
+    try {
+      await downloadInvoicePdf(invoice.id, invoice.invoiceNumber)
+    } catch (err: unknown) {
+      window.alert(extractErrorMessage(err, 'Impossible de telecharger le PDF.'))
     } finally {
       setActionLoading(false)
     }
@@ -152,6 +151,14 @@ export function InvoiceDetailPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleDownloadPdf}
+              disabled={actionLoading}
+            >
+              Telecharger PDF
+            </button>
             {isDraft && (
               <>
                 <button
@@ -162,8 +169,13 @@ export function InvoiceDetailPage() {
                 >
                   Modifier
                 </button>
-                <button type="button" className="btn" onClick={handleSend} disabled={actionLoading}>
-                  Marquer envoyee
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setSendModalOpen(true)}
+                  disabled={actionLoading}
+                >
+                  Envoyer par email
                 </button>
               </>
             )}
@@ -200,6 +212,9 @@ export function InvoiceDetailPage() {
 
         <Section title="Client">
           <p style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>{invoice.clientName}</p>
+          {invoice.clientEmail && (
+            <p style={{ color: 'var(--color-text-muted)' }}>{invoice.clientEmail}</p>
+          )}
         </Section>
 
         <Section title="Lignes">
@@ -281,7 +296,185 @@ export function InvoiceDetailPage() {
           </p>
         )}
       </main>
+
+      {sendModalOpen && (
+        <SendInvoiceModal
+          invoice={invoice}
+          onClose={() => setSendModalOpen(false)}
+          onSent={(updated) => {
+            setInvoice(updated)
+            setSendModalOpen(false)
+          }}
+        />
+      )}
     </>
+  )
+}
+
+function SendInvoiceModal({
+  invoice,
+  onClose,
+  onSent,
+}: {
+  invoice: Invoice
+  onClose: () => void
+  onSent: (updated: Invoice) => void
+}) {
+  const defaultSubject = `Facture ${invoice.invoiceNumber}`
+  const [recipientEmail, setRecipientEmail] = useState(invoice.clientEmail ?? '')
+  const [subject, setSubject] = useState('')
+  const [message, setMessage] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault()
+    setError(null)
+
+    if (!recipientEmail.trim()) {
+      setError("L'adresse email du destinataire est obligatoire.")
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const updated = await sendInvoice(invoice.id, {
+        recipientEmail,
+        subject,
+        message,
+      })
+      onSent(updated)
+    } catch (err: unknown) {
+      setError(extractErrorMessage(err, "L'envoi de l'email a echoue."))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !submitting) onClose()
+      }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0, 0, 0, 0.45)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 'var(--space-4)',
+        zIndex: 1000,
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: 'var(--color-surface)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-6)',
+          width: '100%',
+          maxWidth: 560,
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            marginBottom: 'var(--space-4)',
+          }}
+        >
+          <div>
+            <h2 style={{ marginBottom: 'var(--space-2)' }}>Envoyer la facture par email</h2>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem' }}>
+              {invoice.invoiceNumber} - {invoice.clientName} -{' '}
+              <strong>{formatMoneyMAD(invoice.totalAmount)}</strong>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            aria-label="Fermer"
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '1.5rem',
+              cursor: submitting ? 'not-allowed' : 'pointer',
+              color: 'var(--color-text-muted)',
+              padding: 0,
+              lineHeight: 1,
+            }}
+          >
+            &times;
+          </button>
+        </div>
+
+        {error && <div className="alert alert-error">{error}</div>}
+
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="field">
+            <label htmlFor="recipientEmail">
+              Adresse email du destinataire <span style={{ color: 'var(--color-danger)' }}>*</span>
+            </label>
+            <input
+              id="recipientEmail"
+              type="email"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              required
+              maxLength={255}
+              autoFocus
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="subject">Sujet (optionnel)</label>
+            <input
+              id="subject"
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder={defaultSubject}
+              maxLength={500}
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="message">Message (optionnel)</label>
+            <textarea
+              id="message"
+              rows={5}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              maxLength={5000}
+              placeholder="Si vide, un message standard en francais sera envoye avec la facture en piece jointe."
+            />
+          </div>
+
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginBottom: 'var(--space-4)' }}>
+            La facture sera jointe en PDF. Une fois envoyee, son statut passera a "Envoyee".
+          </p>
+
+          <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onClose}
+              disabled={submitting}
+            >
+              Annuler
+            </button>
+            <button type="submit" className="btn" disabled={submitting}>
+              {submitting ? 'Envoi en cours...' : 'Envoyer'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
 

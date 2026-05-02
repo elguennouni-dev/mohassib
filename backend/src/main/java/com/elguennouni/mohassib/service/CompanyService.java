@@ -24,6 +24,11 @@ public class CompanyService {
     }
 
     @Transactional(readOnly = true)
+    public Optional<Company> findById(Long companyId) {
+        return companyRepository.findById(companyId);
+    }
+
+    @Transactional(readOnly = true)
     public CompanyResponse getForUser(Long userId) {
         Company company = companyRepository.findByUserId(userId)
                 .orElseThrow(CompanyNotFoundException::new);

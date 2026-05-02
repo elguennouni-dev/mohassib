@@ -5,12 +5,15 @@ import com.elguennouni.mohassib.dto.InvoiceRequest;
 import com.elguennouni.mohassib.dto.InvoiceResponse;
 import com.elguennouni.mohassib.dto.InvoiceSummaryResponse;
 import com.elguennouni.mohassib.dto.PageResponse;
+import com.elguennouni.mohassib.dto.SendInvoiceRequest;
 import com.elguennouni.mohassib.entity.Client;
+import com.elguennouni.mohassib.entity.Company;
 import com.elguennouni.mohassib.entity.Invoice;
 import com.elguennouni.mohassib.entity.InvoiceLineItem;
 import com.elguennouni.mohassib.entity.InvoiceStatus;
 import com.elguennouni.mohassib.entity.PaymentStatus;
 import com.elguennouni.mohassib.exception.ClientNotFoundException;
+import com.elguennouni.mohassib.exception.CompanyNotFoundException;
 import com.elguennouni.mohassib.exception.InvalidInvoiceStateException;
 import com.elguennouni.mohassib.exception.InvalidTvaRateException;
 import com.elguennouni.mohassib.exception.InvoiceNotFoundException;
@@ -42,6 +45,11 @@ public class InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
     private final ClientRepository clientRepository;
+    private final CompanyService companyService;
+    private final InvoicePdfService invoicePdfService;
+    private final EmailService emailService;
+
+    public record InvoicePdf(String filename, byte[] bytes) {}
 
     @Transactional(readOnly = true)
     public PageResponse<InvoiceSummaryResponse> list(
@@ -75,7 +83,8 @@ public class InvoiceService {
 
     @Transactional(readOnly = true)
     public InvoiceResponse get(Long companyId, Long invoiceId) {
-        return InvoiceResponse.from(findOrThrow(companyId, invoiceId));
+        Invoice invoice = findOrThrow(companyId, invoiceId);
+        return InvoiceResponse.from(invoice, resolveClientEmail(companyId, invoice.getClientId()));
     }
 
     @Transactional
@@ -101,7 +110,7 @@ public class InvoiceService {
 
         applyLineItems(invoice, request.lineItems());
         Invoice saved = invoiceRepository.save(invoice);
-        return InvoiceResponse.from(saved);
+        return InvoiceResponse.from(saved, client.getEmail());
     }
 
     @Transactional
@@ -124,7 +133,7 @@ public class InvoiceService {
         invoice.clearLineItems();
         applyLineItems(invoice, request.lineItems());
 
-        return InvoiceResponse.from(invoice);
+        return InvoiceResponse.from(invoice, client.getEmail());
     }
 
     @Transactional
@@ -137,14 +146,33 @@ public class InvoiceService {
     }
 
     @Transactional
-    public InvoiceResponse send(Long companyId, Long invoiceId) {
+    public InvoiceResponse send(Long companyId, Long invoiceId, SendInvoiceRequest request) {
         Invoice invoice = findOrThrow(companyId, invoiceId);
         if (invoice.getStatus() != InvoiceStatus.DRAFT) {
-            throw new InvalidInvoiceStateException("Seules les factures en brouillon peuvent etre marquees comme envoyees.");
+            throw new InvalidInvoiceStateException("Seules les factures en brouillon peuvent etre envoyees.");
         }
+
+        Company company = companyService.findById(companyId)
+                .orElseThrow(CompanyNotFoundException::new);
+        Client client = clientRepository.findByIdAndCompanyId(invoice.getClientId(), companyId)
+                .orElse(null);
+
+        byte[] pdf = invoicePdfService.generate(invoice, company, client);
+
         invoice.setStatus(InvoiceStatus.SENT);
         invoice.setSentDate(LocalDateTime.now());
-        return InvoiceResponse.from(invoice);
+
+        // If the email send fails, @Transactional rolls back the SENT status above.
+        emailService.sendInvoiceEmail(
+                invoice,
+                company,
+                pdf,
+                request.recipientEmail(),
+                request.subject(),
+                request.message()
+        );
+
+        return InvoiceResponse.from(invoice, client != null ? client.getEmail() : null);
     }
 
     @Transactional
@@ -157,12 +185,29 @@ public class InvoiceService {
             throw new InvalidInvoiceStateException("Cette facture est deja annulee.");
         }
         invoice.setStatus(InvoiceStatus.CANCELLED);
-        return InvoiceResponse.from(invoice);
+        return InvoiceResponse.from(invoice, resolveClientEmail(companyId, invoice.getClientId()));
+    }
+
+    @Transactional(readOnly = true)
+    public InvoicePdf generatePdf(Long companyId, Long invoiceId) {
+        Invoice invoice = findOrThrow(companyId, invoiceId);
+        Company company = companyService.findById(companyId)
+                .orElseThrow(CompanyNotFoundException::new);
+        Client client = clientRepository.findByIdAndCompanyId(invoice.getClientId(), companyId)
+                .orElse(null);
+        byte[] bytes = invoicePdfService.generate(invoice, company, client);
+        return new InvoicePdf(invoice.getInvoiceNumber() + ".pdf", bytes);
     }
 
     private Invoice findOrThrow(Long companyId, Long invoiceId) {
         return invoiceRepository.findByIdAndCompanyId(invoiceId, companyId)
                 .orElseThrow(InvoiceNotFoundException::new);
+    }
+
+    private String resolveClientEmail(Long companyId, Long clientId) {
+        return clientRepository.findByIdAndCompanyId(clientId, companyId)
+                .map(Client::getEmail)
+                .orElse(null);
     }
 
     private void applyLineItems(Invoice invoice, List<InvoiceLineItemRequest> requests) {

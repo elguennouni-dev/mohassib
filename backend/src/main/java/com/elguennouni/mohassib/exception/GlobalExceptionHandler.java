@@ -59,6 +59,16 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, "INVALID_TVA_RATE", ex.getMessage());
     }
 
+    @ExceptionHandler(PdfGenerationException.class)
+    public ResponseEntity<Map<String, Object>> handlePdfGeneration(PdfGenerationException ex) {
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, "PDF_GENERATION_ERROR", ex.getMessage());
+    }
+
+    @ExceptionHandler(EmailSendingException.class)
+    public ResponseEntity<Map<String, Object>> handleEmailSending(EmailSendingException ex) {
+        return error(HttpStatus.BAD_GATEWAY, "EMAIL_SENDING_ERROR", ex.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         List<Map<String, String>> details = ex.getBindingResult().getFieldErrors().stream()

@@ -14,6 +14,7 @@ public record InvoiceResponse(
         String invoiceNumber,
         Long clientId,
         String clientName,
+        String clientEmail,
         LocalDate invoiceDate,
         LocalDate dueDate,
         String paymentTerms,
@@ -29,6 +30,10 @@ public record InvoiceResponse(
         LocalDateTime updatedAt
 ) {
     public static InvoiceResponse from(Invoice i) {
+        return from(i, null);
+    }
+
+    public static InvoiceResponse from(Invoice i, String clientEmail) {
         List<InvoiceLineItemResponse> lines = i.getLineItems().stream()
                 .map(InvoiceLineItemResponse::from)
                 .toList();
@@ -37,6 +42,7 @@ public record InvoiceResponse(
                 i.getInvoiceNumber(),
                 i.getClientId(),
                 i.getClientName(),
+                clientEmail,
                 i.getInvoiceDate(),
                 i.getDueDate(),
                 i.getPaymentTerms(),

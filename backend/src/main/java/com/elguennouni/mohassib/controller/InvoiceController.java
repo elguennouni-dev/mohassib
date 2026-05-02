@@ -4,6 +4,7 @@ import com.elguennouni.mohassib.dto.InvoiceRequest;
 import com.elguennouni.mohassib.dto.InvoiceResponse;
 import com.elguennouni.mohassib.dto.InvoiceSummaryResponse;
 import com.elguennouni.mohassib.dto.PageResponse;
+import com.elguennouni.mohassib.dto.SendInvoiceRequest;
 import com.elguennouni.mohassib.entity.InvoiceStatus;
 import com.elguennouni.mohassib.exception.CompanyNotFoundException;
 import com.elguennouni.mohassib.exception.InvalidTokenException;
@@ -11,7 +12,10 @@ import com.elguennouni.mohassib.service.CompanyService;
 import com.elguennouni.mohassib.service.InvoiceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -64,13 +68,26 @@ public class InvoiceController {
     }
 
     @PostMapping("/{id}/send")
-    public InvoiceResponse send(@PathVariable Long id, Authentication authentication) {
-        return invoiceService.send(currentCompanyId(authentication), id);
+    public InvoiceResponse send(
+            @PathVariable Long id,
+            @Valid @RequestBody SendInvoiceRequest request,
+            Authentication authentication
+    ) {
+        return invoiceService.send(currentCompanyId(authentication), id, request);
     }
 
     @PostMapping("/{id}/cancel")
     public InvoiceResponse cancel(@PathVariable Long id, Authentication authentication) {
         return invoiceService.cancel(currentCompanyId(authentication), id);
+    }
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> getPdf(@PathVariable Long id, Authentication authentication) {
+        InvoiceService.InvoicePdf pdf = invoiceService.generatePdf(currentCompanyId(authentication), id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + pdf.filename() + "\"")
+                .body(pdf.bytes());
     }
 
     private Long currentCompanyId(Authentication authentication) {

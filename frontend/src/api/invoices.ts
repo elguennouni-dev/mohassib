@@ -21,6 +21,7 @@ export type Invoice = {
   invoiceNumber: string
   clientId: number
   clientName: string
+  clientEmail: string | null
   invoiceDate: string
   dueDate: string | null
   paymentTerms: string | null
@@ -34,6 +35,12 @@ export type Invoice = {
   lineItems: InvoiceLineItem[]
   createdAt: string
   updatedAt: string
+}
+
+export type SendInvoicePayload = {
+  recipientEmail: string
+  subject?: string
+  message?: string
 }
 
 export type InvoiceSummary = {
@@ -157,14 +164,32 @@ export async function deleteInvoice(id: number): Promise<void> {
   await apiClient.delete(`/invoices/${id}`)
 }
 
-export async function sendInvoice(id: number): Promise<Invoice> {
-  const res = await apiClient.post<Invoice>(`/invoices/${id}/send`)
+export async function sendInvoice(id: number, payload: SendInvoicePayload): Promise<Invoice> {
+  const body = {
+    recipientEmail: payload.recipientEmail.trim(),
+    subject: payload.subject?.trim() || null,
+    message: payload.message?.trim() || null,
+  }
+  const res = await apiClient.post<Invoice>(`/invoices/${id}/send`, body)
   return res.data
 }
 
 export async function cancelInvoice(id: number): Promise<Invoice> {
   const res = await apiClient.post<Invoice>(`/invoices/${id}/cancel`)
   return res.data
+}
+
+export async function downloadInvoicePdf(id: number, invoiceNumber: string): Promise<void> {
+  const res = await apiClient.get<Blob>(`/invoices/${id}/pdf`, { responseType: 'blob' })
+  const blob = new Blob([res.data], { type: 'application/pdf' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${invoiceNumber}.pdf`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 100)
 }
 
 export const STATUS_LABELS: Record<InvoiceStatus, string> = {
