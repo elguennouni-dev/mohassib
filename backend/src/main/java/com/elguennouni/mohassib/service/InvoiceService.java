@@ -5,11 +5,13 @@ import com.elguennouni.mohassib.dto.InvoiceRequest;
 import com.elguennouni.mohassib.dto.InvoiceResponse;
 import com.elguennouni.mohassib.dto.InvoiceSummaryResponse;
 import com.elguennouni.mohassib.dto.PageResponse;
+import com.elguennouni.mohassib.dto.SendInvoiceReminderRequest;
 import com.elguennouni.mohassib.dto.SendInvoiceRequest;
 import com.elguennouni.mohassib.entity.Client;
 import com.elguennouni.mohassib.entity.Company;
 import com.elguennouni.mohassib.entity.Invoice;
 import com.elguennouni.mohassib.entity.InvoiceLineItem;
+import com.elguennouni.mohassib.entity.InvoicePayment;
 import com.elguennouni.mohassib.entity.InvoiceStatus;
 import com.elguennouni.mohassib.entity.PaymentStatus;
 import com.elguennouni.mohassib.exception.ClientNotFoundException;
@@ -18,6 +20,7 @@ import com.elguennouni.mohassib.exception.InvalidInvoiceStateException;
 import com.elguennouni.mohassib.exception.InvalidTvaRateException;
 import com.elguennouni.mohassib.exception.InvoiceNotFoundException;
 import com.elguennouni.mohassib.repository.ClientRepository;
+import com.elguennouni.mohassib.repository.InvoicePaymentRepository;
 import com.elguennouni.mohassib.repository.InvoiceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -45,6 +49,7 @@ public class InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
     private final ClientRepository clientRepository;
+    private final InvoicePaymentRepository paymentRepository;
     private final CompanyService companyService;
     private final InvoicePdfService invoicePdfService;
     private final EmailService emailService;
@@ -84,7 +89,7 @@ public class InvoiceService {
     @Transactional(readOnly = true)
     public InvoiceResponse get(Long companyId, Long invoiceId) {
         Invoice invoice = findOrThrow(companyId, invoiceId);
-        return InvoiceResponse.from(invoice, resolveClientEmail(companyId, invoice.getClientId()));
+        return buildFullResponse(invoice, companyId);
     }
 
     @Transactional
@@ -110,7 +115,7 @@ public class InvoiceService {
 
         applyLineItems(invoice, request.lineItems());
         Invoice saved = invoiceRepository.save(invoice);
-        return InvoiceResponse.from(saved, client.getEmail());
+        return InvoiceResponse.from(saved, client.getEmail(), BigDecimal.ZERO, Collections.emptyList());
     }
 
     @Transactional
@@ -133,7 +138,7 @@ public class InvoiceService {
         invoice.clearLineItems();
         applyLineItems(invoice, request.lineItems());
 
-        return InvoiceResponse.from(invoice, client.getEmail());
+        return InvoiceResponse.from(invoice, client.getEmail(), BigDecimal.ZERO, Collections.emptyList());
     }
 
     @Transactional
@@ -172,7 +177,44 @@ public class InvoiceService {
                 request.message()
         );
 
-        return InvoiceResponse.from(invoice, client != null ? client.getEmail() : null);
+        return InvoiceResponse.from(
+                invoice,
+                client != null ? client.getEmail() : null,
+                BigDecimal.ZERO,
+                Collections.emptyList()
+        );
+    }
+
+    @Transactional
+    public InvoiceResponse sendReminder(Long companyId, Long invoiceId, SendInvoiceReminderRequest request) {
+        Invoice invoice = findOrThrow(companyId, invoiceId);
+        if (invoice.getStatus() != InvoiceStatus.SENT && invoice.getStatus() != InvoiceStatus.OVERDUE) {
+            throw new InvalidInvoiceStateException(
+                    "Une relance ne peut etre envoyee que pour une facture envoyee ou en retard."
+            );
+        }
+
+        Company company = companyService.findById(companyId)
+                .orElseThrow(CompanyNotFoundException::new);
+        Client client = clientRepository.findByIdAndCompanyId(invoice.getClientId(), companyId)
+                .orElse(null);
+
+        byte[] pdf = invoicePdfService.generate(invoice, company, client);
+
+        BigDecimal alreadyPaid = paymentRepository.sumAmountByInvoiceId(invoice.getId());
+        BigDecimal outstanding = invoice.getTotalAmount().subtract(alreadyPaid);
+
+        emailService.sendInvoiceReminderEmail(
+                invoice,
+                company,
+                pdf,
+                outstanding,
+                request.recipientEmail(),
+                request.subject(),
+                request.message()
+        );
+
+        return buildFullResponse(invoice, companyId);
     }
 
     @Transactional
@@ -185,7 +227,7 @@ public class InvoiceService {
             throw new InvalidInvoiceStateException("Cette facture est deja annulee.");
         }
         invoice.setStatus(InvoiceStatus.CANCELLED);
-        return InvoiceResponse.from(invoice, resolveClientEmail(companyId, invoice.getClientId()));
+        return buildFullResponse(invoice, companyId);
     }
 
     @Transactional(readOnly = true)
@@ -199,15 +241,18 @@ public class InvoiceService {
         return new InvoicePdf(invoice.getInvoiceNumber() + ".pdf", bytes);
     }
 
+    private InvoiceResponse buildFullResponse(Invoice invoice, Long companyId) {
+        String clientEmail = clientRepository.findByIdAndCompanyId(invoice.getClientId(), companyId)
+                .map(Client::getEmail)
+                .orElse(null);
+        BigDecimal paidAmount = paymentRepository.sumAmountByInvoiceId(invoice.getId());
+        List<InvoicePayment> payments = paymentRepository.findByInvoiceIdOrderByPaymentDateDescIdDesc(invoice.getId());
+        return InvoiceResponse.from(invoice, clientEmail, paidAmount, payments);
+    }
+
     private Invoice findOrThrow(Long companyId, Long invoiceId) {
         return invoiceRepository.findByIdAndCompanyId(invoiceId, companyId)
                 .orElseThrow(InvoiceNotFoundException::new);
-    }
-
-    private String resolveClientEmail(Long companyId, Long clientId) {
-        return clientRepository.findByIdAndCompanyId(clientId, companyId)
-                .map(Client::getEmail)
-                .orElse(null);
     }
 
     private void applyLineItems(Invoice invoice, List<InvoiceLineItemRequest> requests) {

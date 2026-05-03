@@ -69,6 +69,16 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.BAD_GATEWAY, "EMAIL_SENDING_ERROR", ex.getMessage());
     }
 
+    @ExceptionHandler(InvalidPaymentException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidPayment(InvalidPaymentException ex) {
+        return error(HttpStatus.CONFLICT, "INVALID_PAYMENT", ex.getMessage());
+    }
+
+    @ExceptionHandler(PaymentNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handlePaymentNotFound(PaymentNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", ex.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         List<Map<String, String>> details = ex.getBindingResult().getFieldErrors().stream()

@@ -6,10 +6,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 @Repository
@@ -61,4 +63,15 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
             @Param("companyId") Long companyId,
             @Param("year") int year
     );
+
+    @Modifying
+    @Query("""
+            UPDATE Invoice i
+            SET i.status = com.elguennouni.mohassib.entity.InvoiceStatus.OVERDUE
+            WHERE i.status = com.elguennouni.mohassib.entity.InvoiceStatus.SENT
+              AND i.paymentStatus <> com.elguennouni.mohassib.entity.PaymentStatus.PAID
+              AND i.dueDate IS NOT NULL
+              AND i.dueDate < :today
+            """)
+    int flagOverdueAsOf(@Param("today") LocalDate today);
 }

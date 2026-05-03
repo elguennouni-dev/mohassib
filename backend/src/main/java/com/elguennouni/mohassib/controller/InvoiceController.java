@@ -4,6 +4,7 @@ import com.elguennouni.mohassib.dto.InvoiceRequest;
 import com.elguennouni.mohassib.dto.InvoiceResponse;
 import com.elguennouni.mohassib.dto.InvoiceSummaryResponse;
 import com.elguennouni.mohassib.dto.PageResponse;
+import com.elguennouni.mohassib.dto.SendInvoiceReminderRequest;
 import com.elguennouni.mohassib.dto.SendInvoiceRequest;
 import com.elguennouni.mohassib.entity.InvoiceStatus;
 import com.elguennouni.mohassib.exception.CompanyNotFoundException;
@@ -79,6 +80,15 @@ public class InvoiceController {
     @PostMapping("/{id}/cancel")
     public InvoiceResponse cancel(@PathVariable Long id, Authentication authentication) {
         return invoiceService.cancel(currentCompanyId(authentication), id);
+    }
+
+    @PostMapping("/{id}/send-reminder")
+    public InvoiceResponse sendReminder(
+            @PathVariable Long id,
+            @Valid @RequestBody SendInvoiceReminderRequest request,
+            Authentication authentication
+    ) {
+        return invoiceService.sendReminder(currentCompanyId(authentication), id, request);
     }
 
     @GetMapping("/{id}/pdf")

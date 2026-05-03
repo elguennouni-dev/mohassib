@@ -46,6 +46,43 @@ public class EmailService {
             String customSubject,
             String customMessage
     ) {
+        sendWithAttachment(
+                invoice,
+                company,
+                pdf,
+                recipientEmail,
+                buildSubject(invoice, company, customSubject),
+                buildBody(invoice, company, customMessage)
+        );
+    }
+
+    public void sendInvoiceReminderEmail(
+            Invoice invoice,
+            Company company,
+            byte[] pdf,
+            BigDecimal outstandingAmount,
+            String recipientEmail,
+            String customSubject,
+            String customMessage
+    ) {
+        sendWithAttachment(
+                invoice,
+                company,
+                pdf,
+                recipientEmail,
+                buildReminderSubject(invoice, customSubject),
+                buildReminderBody(invoice, company, outstandingAmount, customMessage)
+        );
+    }
+
+    private void sendWithAttachment(
+            Invoice invoice,
+            Company company,
+            byte[] pdf,
+            String recipientEmail,
+            String subject,
+            String htmlBody
+    ) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -53,8 +90,8 @@ public class EmailService {
             helper.setFrom(fromAddress, fromName);
             helper.setReplyTo(company.getEmail());
             helper.setTo(recipientEmail);
-            helper.setSubject(buildSubject(invoice, company, customSubject));
-            helper.setText(buildBody(invoice, company, customMessage), true);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);
             helper.addAttachment(invoice.getInvoiceNumber() + ".pdf", new ByteArrayResource(pdf));
 
             mailSender.send(message);
@@ -83,6 +120,62 @@ public class EmailService {
                     + "</div>";
         }
         return defaultBody(invoice, company);
+    }
+
+    private String buildReminderSubject(Invoice invoice, String custom) {
+        if (custom != null && !custom.isBlank()) {
+            return custom.trim();
+        }
+        return "Relance : facture " + invoice.getInvoiceNumber();
+    }
+
+    private String buildReminderBody(Invoice invoice, Company company, BigDecimal outstandingAmount, String custom) {
+        if (custom != null && !custom.isBlank()) {
+            return "<div style=\"font-family: Arial, sans-serif; font-size: 14px; color: #1a1a1a;\">"
+                    + escapeAndBreak(custom)
+                    + "<p style=\"margin-top:24px; color:#5a5a5a; font-size:12px;\">Facture en piece jointe : <strong>"
+                    + invoice.getInvoiceNumber()
+                    + "</strong></p>"
+                    + "</div>";
+        }
+        return defaultReminderBody(invoice, company, outstandingAmount);
+    }
+
+    private String defaultReminderBody(Invoice invoice, Company company, BigDecimal outstandingAmount) {
+        long daysOverdue = invoice.getDueDate() != null
+                ? java.time.temporal.ChronoUnit.DAYS.between(invoice.getDueDate(), java.time.LocalDate.now())
+                : 0L;
+        String overdueLine = daysOverdue > 0
+                ? "<p>Cette facture est en retard de <strong>" + daysOverdue + " jour" + (daysOverdue > 1 ? "s" : "") + "</strong>.</p>"
+                : "";
+        String dueLine = invoice.getDueDate() != null
+                ? "<p>Echeance initiale : <strong>" + invoice.getDueDate().format(DATE_FORMAT) + "</strong></p>"
+                : "";
+        BigDecimal amountToShow = outstandingAmount != null ? outstandingAmount : invoice.getTotalAmount();
+
+        return """
+                <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a1a; line-height: 1.5;">
+                  <p>Bonjour,</p>
+                  <p>Sauf erreur de notre part, la facture <strong>%s</strong> emise le %s pour un montant de <strong>%s</strong> n'a pas encore ete entierement reglee.</p>
+                  <p>Reste a payer : <strong>%s</strong></p>
+                  %s
+                  %s
+                  <p>Nous vous remercions de bien vouloir effectuer le reglement dans les meilleurs delais.</p>
+                  <p>Cordialement,<br>
+                  <strong>%s</strong><br>
+                  %s | %s</p>
+                </div>
+                """.formatted(
+                        escape(invoice.getInvoiceNumber()),
+                        invoice.getInvoiceDate().format(DATE_FORMAT),
+                        formatMoney(invoice.getTotalAmount()),
+                        formatMoney(amountToShow),
+                        dueLine,
+                        overdueLine,
+                        escape(company.getName()),
+                        escape(company.getEmail()),
+                        escape(company.getPhone())
+                );
     }
 
     private String defaultBody(Invoice invoice, Company company) {

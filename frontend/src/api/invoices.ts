@@ -16,6 +16,17 @@ export type InvoiceLineItem = {
   lineTotal: string
 }
 
+export type InvoicePayment = {
+  id: number
+  invoiceId: number
+  amount: string
+  paymentMethod: 'BANK_TRANSFER' | 'CASH' | 'CHECK' | 'OTHER'
+  paymentDate: string
+  referenceNumber: string | null
+  notes: string | null
+  recordedAt: string
+}
+
 export type Invoice = {
   id: number
   invoiceNumber: string
@@ -29,10 +40,13 @@ export type Invoice = {
   netAmount: string
   tvaAmount: string
   totalAmount: string
+  paidAmount: string
+  outstandingAmount: string
   status: InvoiceStatus
   paymentStatus: PaymentStatus
   sentDate: string | null
   lineItems: InvoiceLineItem[]
+  payments: InvoicePayment[]
   createdAt: string
   updatedAt: string
 }
@@ -176,6 +190,16 @@ export async function sendInvoice(id: number, payload: SendInvoicePayload): Prom
 
 export async function cancelInvoice(id: number): Promise<Invoice> {
   const res = await apiClient.post<Invoice>(`/invoices/${id}/cancel`)
+  return res.data
+}
+
+export async function sendInvoiceReminder(id: number, payload: SendInvoicePayload): Promise<Invoice> {
+  const body = {
+    recipientEmail: payload.recipientEmail.trim(),
+    subject: payload.subject?.trim() || null,
+    message: payload.message?.trim() || null,
+  }
+  const res = await apiClient.post<Invoice>(`/invoices/${id}/send-reminder`, body)
   return res.data
 }
 
