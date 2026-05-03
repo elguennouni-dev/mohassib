@@ -1,0 +1,7 @@
+package com.elguennouni.mohassib.exception;
+
+public class InvalidPaymentException extends RuntimeException {
+    public InvalidPaymentException(String message) {
+        super(message);
+    }
+}
