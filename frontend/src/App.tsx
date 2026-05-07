@@ -1,7 +1,13 @@
 import { AppRouter } from './router/AppRouter'
+import { OfflineBanner } from './components/feedback/OfflineBanner'
 
 function App() {
-  return <AppRouter />
+  return (
+    <>
+      <OfflineBanner />
+      <AppRouter />
+    </>
+  )
 }
 
 export default App

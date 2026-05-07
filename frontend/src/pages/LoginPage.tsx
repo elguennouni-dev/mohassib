@@ -25,8 +25,10 @@ export function LoginPage() {
     event.preventDefault()
     setError(null)
     setSubmitting(true)
+
     try {
       const result = await login(email, password)
+
       if (result.company === null) {
         navigate('/mon-entreprise/creation', { replace: true })
       } else {
@@ -34,18 +36,23 @@ export function LoginPage() {
         navigate(redirectTo, { replace: true })
       }
     } catch (err: unknown) {
-      let message = 'Une erreur est survenue. Veuillez reessayer.'
+      let message = 'Une erreur est survenue. Veuillez réessayer.'
+
       if (axios.isAxiosError(err)) {
         const status = err.response?.status
         const body = err.response?.data as ApiErrorBody | undefined
+
         if (status === 401) {
-          message = body?.message ?? 'Identifiants invalides.'
+          message = body?.message ?? 'Email ou mot de passe incorrect.'
         } else if (status === 400 && body?.message) {
           message = body.message
+        } else if (status === 429) {
+          message = 'Trop de tentatives. Veuillez réessayer dans quelques minutes.'
         } else if (!err.response) {
-          message = 'Le serveur est injoignable. Verifiez votre connexion.'
+          message = 'Le serveur est injoignable. Vérifiez votre connexion.'
         }
       }
+
       setError(message)
     } finally {
       setSubmitting(false)
@@ -56,26 +63,41 @@ export function LoginPage() {
     <>
       <PublicHeader />
       <main className="container" style={{ maxWidth: 420, padding: 'var(--space-8) var(--space-5)' }}>
-        <h1 style={{ marginBottom: 'var(--space-5)' }}>Connexion</h1>
+        <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+          <h1 style={{ marginBottom: 'var(--space-2)' }}>Connexion</h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+            Accédez à votre espace de travail
+          </p>
+        </div>
 
         {justRegistered && (
           <div
-            className="alert"
+            className="alert alert-success"
             style={{
-              backgroundColor: '#e6f5ec',
-              border: '1px solid #b7dec6',
-              color: 'var(--color-success)',
+              marginBottom: 'var(--space-5)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
             }}
           >
-            Votre compte a ete cree. Vous pouvez maintenant vous connecter.
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+            Votre compte a été créé. Vous pouvez maintenant vous connecter.
           </div>
         )}
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && (
+          <div className="alert alert-error" style={{ marginBottom: 'var(--space-5)' }}>
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="field">
-            <label htmlFor="email">Adresse email</label>
+            <label htmlFor="email" className="field-label">
+              Adresse email
+            </label>
             <input
               id="email"
               type="email"
@@ -83,11 +105,16 @@ export function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="input"
+              placeholder="vous@exemple.com"
+              disabled={submitting}
             />
           </div>
 
           <div className="field">
-            <label htmlFor="password">Mot de passe</label>
+            <label htmlFor="password" className="field-label">
+              Mot de passe
+            </label>
             <input
               id="password"
               type="password"
@@ -95,17 +122,37 @@ export function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="input"
+              placeholder="Votre mot de passe"
+              disabled={submitting}
             />
           </div>
 
-          <button type="submit" className="btn" disabled={submitting} style={{ width: '100%' }}>
-            {submitting ? 'Connexion en cours...' : 'Se connecter'}
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={submitting}
+            style={{ width: '100%', marginTop: 'var(--space-2)' }}
+          >
+            {submitting ? (
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)' }}>
+                <span className="spinner" style={{ width: 16, height: 16, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                Connexion...
+              </span>
+            ) : (
+              'Se connecter'
+            )}
           </button>
         </form>
 
-        <p style={{ marginTop: 'var(--space-5)', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-          Pas encore de compte ? <Link to="/inscription">Creer un compte</Link>
-        </p>
+        <div style={{ marginTop: 'var(--space-6)', textAlign: 'center' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+            Pas encore de compte ?{' '}
+            <Link to="/inscription" style={{ fontWeight: 500 }}>
+              Créer un compte
+            </Link>
+          </p>
+        </div>
       </main>
     </>
   )

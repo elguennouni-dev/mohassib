@@ -79,6 +79,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", ex.getMessage());
     }
 
+    @ExceptionHandler(EmployeeNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleEmployeeNotFound(EmployeeNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "EMPLOYEE_NOT_FOUND", ex.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         List<Map<String, String>> details = ex.getBindingResult().getFieldErrors().stream()

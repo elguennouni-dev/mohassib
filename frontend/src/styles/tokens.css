@@ -1,0 +1,126 @@
+:root {
+  --color-bg: #F8F9FA;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F3F4F6;
+
+  --color-text: #111827;
+  --color-text-secondary: #374151;
+  --color-text-muted: #6B7280;
+  --color-text-disabled: #9CA3AF;
+  --color-text-inverse: #FFFFFF;
+
+  --color-border: #E5E7EB;
+  --color-border-strong: #D1D5DB;
+  --color-border-subtle: #F3F4F6;
+
+  --color-primary: #1F3A5F;
+  --color-primary-hover: #182E4A;
+  --color-primary-active: #142640;
+  --color-primary-light: #E8EDF5;
+  --color-primary-text: #FFFFFF;
+  --color-primary-ring: rgba(31, 58, 95, 0.18);
+
+  --color-success: #16A34A;
+  --color-success-bg: #DCFCE7;
+  --color-success-border: #BBF7D0;
+
+  --color-warning: #D97706;
+  --color-warning-bg: #FEF3C7;
+  --color-warning-border: #FDE68A;
+
+  --color-danger: #DC2626;
+  --color-danger-hover: #B91C1C;
+  --color-danger-bg: #FEE2E2;
+  --color-danger-border: #FECACA;
+  --color-danger-ring: rgba(220, 38, 38, 0.18);
+
+  --color-danger-muted: #9F1239;
+  --color-danger-muted-bg: #FFE4E6;
+  --color-danger-muted-border: #FECDD3;
+
+  --color-info: #2563EB;
+  --color-info-bg: #DBEAFE;
+  --color-info-border: #BFDBFE;
+
+  --status-gray-bg: #F3F4F6;
+  --status-gray-fg: #4B5563;
+  --status-gray-border: #E5E7EB;
+
+  --status-blue-bg: #DBEAFE;
+  --status-blue-fg: #1E40AF;
+  --status-blue-border: #BFDBFE;
+
+  --status-amber-bg: #FEF3C7;
+  --status-amber-fg: #92400E;
+  --status-amber-border: #FDE68A;
+
+  --status-green-bg: #DCFCE7;
+  --status-green-fg: #166534;
+  --status-green-border: #BBF7D0;
+
+  --status-red-bg: #FEE2E2;
+  --status-red-fg: #991B1B;
+  --status-red-border: #FECACA;
+
+  --status-red-muted-bg: #FFE4E6;
+  --status-red-muted-fg: #9F1239;
+  --status-red-muted-border: #FECDD3;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-serif: var(--font-sans);
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 30px;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+
+  --radius-sm: 2px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px 0 rgba(17, 24, 39, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(17, 24, 39, 0.07), 0 2px 4px -2px rgba(17, 24, 39, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(17, 24, 39, 0.08), 0 4px 6px -4px rgba(17, 24, 39, 0.04);
+  --shadow-modal: 0 20px 40px rgba(17, 24, 39, 0.20);
+
+  --sidebar-width: 240px;
+  --sidebar-width-collapsed: 64px;
+  --topbar-height: 56px;
+
+  --z-sidebar: 50;
+  --z-topbar: 60;
+  --z-offline-banner: 70;
+  --z-modal-backdrop: 1000;
+  --z-modal: 1010;
+  --z-toast: 1100;
+
+  --transition-fast: 0.12s ease-out;
+  --transition-base: 0.18s ease-out;
+}

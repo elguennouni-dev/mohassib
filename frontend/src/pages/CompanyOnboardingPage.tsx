@@ -32,6 +32,7 @@ export function CompanyOnboardingPage() {
     setError(null)
     setFieldErrors({})
     setSubmitting(true)
+
     try {
       const created = await createCompany(values)
       setCompany(created)
@@ -39,22 +40,23 @@ export function CompanyOnboardingPage() {
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         const body = err.response?.data as ApiErrorBody | undefined
+
         if (body?.details && body.details.length > 0) {
           const next: Record<string, string> = {}
           body.details.forEach((d) => {
             next[d.field] = d.message
           })
           setFieldErrors(next)
-          setError('Veuillez corriger les champs indiques.')
+          setError('Veuillez corriger les champs indiqués.')
         } else if (body?.message) {
           setError(body.message)
         } else if (!err.response) {
-          setError('Le serveur est injoignable. Verifiez votre connexion.')
+          setError('Le serveur est injoignable. Vérifiez votre connexion.')
         } else {
-          setError("Impossible d'enregistrer l'entreprise. Veuillez reessayer.")
+          setError("Impossible d'enregistrer l'entreprise. Veuillez réessayer.")
         }
       } else {
-        setError("Impossible d'enregistrer l'entreprise. Veuillez reessayer.")
+        setError("Impossible d'enregistrer l'entreprise. Veuillez réessayer.")
       }
     } finally {
       setSubmitting(false)
@@ -64,13 +66,22 @@ export function CompanyOnboardingPage() {
   return (
     <>
       <AppHeader />
-      <main className="container" style={{ padding: 'var(--space-8) var(--space-5)', maxWidth: 880 }}>
-        <h1 style={{ marginBottom: 'var(--space-3)' }}>Configurez votre entreprise</h1>
-        <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-6)' }}>
-          Ces informations apparaitront sur vos factures, bulletins de paie et declarations TVA. Vous pourrez les modifier plus tard.
-        </p>
+      <main className="container" style={{ padding: 'var(--space-8) var(--space-5)', maxWidth: 960 }}>
+        <div style={{ marginBottom: 'var(--space-6)' }}>
+          <h1 style={{ marginBottom: 'var(--space-2)', fontSize: 'var(--font-size-2xl)' }}>
+            Configurez votre entreprise
+          </h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+            Ces informations apparaîtront sur vos factures, bulletins de paie et déclarations TVA.
+            Vous pourrez les modifier plus tard.
+          </p>
+        </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && (
+          <div className="alert alert-error" style={{ marginBottom: 'var(--space-5)' }}>
+            {error}
+          </div>
+        )}
 
         <CompanyForm
           values={values}

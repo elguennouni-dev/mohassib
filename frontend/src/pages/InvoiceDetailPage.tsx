@@ -57,18 +57,22 @@ export function InvoiceDetailPage() {
 
   useEffect(() => {
     void load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoiceId])
 
   const handleCancel = async () => {
     if (!invoice) return
-    if (!window.confirm(`Annuler la facture ${invoice.invoiceNumber} ?`)) return
+
+    const confirmed = window.confirm(`Annuler la facture ${invoice.invoiceNumber} ? Cette action est irréversible.`)
+    if (!confirmed) return
+
     setActionLoading(true)
     try {
       const updated = await cancelInvoice(invoice.id)
       setInvoice(updated)
     } catch (err: unknown) {
-      window.alert(extractErrorMessage(err, "Impossible d'annuler la facture."))
+      const message = extractErrorMessage(err, "Impossible d'annuler la facture.")
+      setError(message)
+      setTimeout(() => setError(null), 5000)
     } finally {
       setActionLoading(false)
     }
@@ -80,7 +84,9 @@ export function InvoiceDetailPage() {
     try {
       await downloadInvoicePdf(invoice.id, invoice.invoiceNumber)
     } catch (err: unknown) {
-      window.alert(extractErrorMessage(err, 'Impossible de telecharger le PDF.'))
+      const message = extractErrorMessage(err, 'Impossible de télécharger le PDF.')
+      setError(message)
+      setTimeout(() => setError(null), 5000)
     } finally {
       setActionLoading(false)
     }
@@ -88,26 +94,36 @@ export function InvoiceDetailPage() {
 
   const handleDelete = async () => {
     if (!invoice) return
-    if (!window.confirm(`Supprimer definitivement la facture ${invoice.invoiceNumber} ?`)) return
+
+    const confirmed = window.confirm(`Supprimer définitivement la facture ${invoice.invoiceNumber} ? Cette action est irréversible.`)
+    if (!confirmed) return
+
     setActionLoading(true)
     try {
       await deleteInvoice(invoice.id)
       navigate('/factures', { replace: true })
     } catch (err: unknown) {
-      window.alert(extractErrorMessage(err, 'Impossible de supprimer la facture.'))
+      const message = extractErrorMessage(err, 'Impossible de supprimer la facture.')
+      setError(message)
+      setTimeout(() => setError(null), 5000)
       setActionLoading(false)
     }
   }
 
   const handleDeletePayment = async (payment: InvoicePayment) => {
     if (!invoice) return
-    if (!window.confirm(`Supprimer ce paiement de ${formatMoneyMAD(payment.amount)} ?`)) return
+
+    const confirmed = window.confirm(`Supprimer ce paiement de ${formatMoneyMAD(payment.amount)} ?`)
+    if (!confirmed) return
+
     setActionLoading(true)
     try {
       const updated = await deletePayment(payment.id)
       setInvoice(updated)
     } catch (err: unknown) {
-      window.alert(extractErrorMessage(err, 'Impossible de supprimer le paiement.'))
+      const message = extractErrorMessage(err, 'Impossible de supprimer le paiement.')
+      setError(message)
+      setTimeout(() => setError(null), 5000)
     } finally {
       setActionLoading(false)
     }
@@ -118,7 +134,10 @@ export function InvoiceDetailPage() {
       <>
         <AppHeader />
         <main className="container" style={{ padding: 'var(--space-8) var(--space-5)' }}>
-          <p style={{ color: 'var(--color-text-muted)' }}>Chargement...</p>
+          <div style={{ textAlign: 'center', padding: 'var(--space-12)' }}>
+            <div className="spinner" style={{ width: 32, height: 32, margin: '0 auto var(--space-4)' }} />
+            <p style={{ color: 'var(--color-text-muted)' }}>Chargement de la facture...</p>
+          </div>
         </main>
       </>
     )
@@ -130,7 +149,7 @@ export function InvoiceDetailPage() {
         <AppHeader />
         <main className="container" style={{ padding: 'var(--space-8) var(--space-5)' }}>
           <p style={{ marginBottom: 'var(--space-3)' }}>
-            <Link to="/factures">&larr; Retour a la liste</Link>
+            <Link to="/factures">← Retour à la liste</Link>
           </p>
           <div className="alert alert-error">{error ?? 'Facture introuvable.'}</div>
         </main>
@@ -141,7 +160,7 @@ export function InvoiceDetailPage() {
   const isDraft = invoice.status === 'DRAFT'
   const isSent = invoice.status === 'SENT'
   const isOverdue = invoice.status === 'OVERDUE'
-  const isCancelable = isDraft || isSent || isOverdue
+  const isCancellable = isDraft || isSent || isOverdue
   const canRecordPayment = isSent || isOverdue
   const canSendReminder = isSent || isOverdue
   const hasPayments = invoice.payments.length > 0
@@ -150,9 +169,9 @@ export function InvoiceDetailPage() {
   return (
     <>
       <AppHeader />
-      <main className="container" style={{ padding: 'var(--space-8) var(--space-5)' }}>
+      <main className="container" style={{ padding: 'var(--space-8) var(--space-5)', maxWidth: 1200 }}>
         <p style={{ marginBottom: 'var(--space-3)' }}>
-          <Link to="/factures">&larr; Retour a la liste</Link>
+          <Link to="/factures">← Retour à la liste</Link>
         </p>
 
         <div
@@ -161,7 +180,7 @@ export function InvoiceDetailPage() {
             justifyContent: 'space-between',
             alignItems: 'flex-start',
             gap: 'var(--space-4)',
-            marginBottom: 'var(--space-5)',
+            marginBottom: 'var(--space-6)',
             flexWrap: 'wrap',
           }}
         >
@@ -169,9 +188,9 @@ export function InvoiceDetailPage() {
             <h1 style={{ marginBottom: 'var(--space-2)' }}>Facture {invoice.invoiceNumber}</h1>
             <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
               <StatusBadge status={invoice.status} />
-              <span style={{ color: 'var(--color-text-muted)' }}>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
                 Date : {formatDateFr(invoice.invoiceDate)}
-                {invoice.dueDate && ` | Echeance : ${formatDateFr(invoice.dueDate)}`}
+                {invoice.dueDate && ` | Échéance : ${formatDateFr(invoice.dueDate)}`}
               </span>
             </div>
           </div>
@@ -183,13 +202,13 @@ export function InvoiceDetailPage() {
               onClick={handleDownloadPdf}
               disabled={actionLoading}
             >
-              Telecharger PDF
+              Télécharger PDF
             </button>
             {isDraft && (
               <>
                 <button
                   type="button"
-                  className="btn"
+                  className="btn btn-primary"
                   onClick={() => navigate(`/factures/${invoice.id}/modifier`)}
                   disabled={actionLoading}
                 >
@@ -197,7 +216,7 @@ export function InvoiceDetailPage() {
                 </button>
                 <button
                   type="button"
-                  className="btn"
+                  className="btn btn-primary"
                   onClick={() => setSendModalOpen(true)}
                   disabled={actionLoading}
                 >
@@ -208,7 +227,7 @@ export function InvoiceDetailPage() {
             {canRecordPayment && (
               <button
                 type="button"
-                className="btn"
+                className="btn btn-primary"
                 onClick={() => setPaymentModalOpen(true)}
                 disabled={actionLoading}
               >
@@ -225,10 +244,10 @@ export function InvoiceDetailPage() {
                 Envoyer une relance
               </button>
             )}
-            {isCancelable && (
+            {isCancellable && (
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn-danger"
                 onClick={handleCancel}
                 disabled={actionLoading}
               >
@@ -238,17 +257,9 @@ export function InvoiceDetailPage() {
             {isDraft && (
               <button
                 type="button"
+                className="btn btn-secondary"
                 onClick={handleDelete}
                 disabled={actionLoading}
-                style={{
-                  padding: 'var(--space-3) var(--space-5)',
-                  border: '1px solid var(--color-danger)',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'transparent',
-                  color: 'var(--color-danger)',
-                  fontWeight: 600,
-                  cursor: actionLoading ? 'not-allowed' : 'pointer',
-                }}
               >
                 Supprimer
               </button>
@@ -259,7 +270,9 @@ export function InvoiceDetailPage() {
         <Section title="Client">
           <p style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>{invoice.clientName}</p>
           {invoice.clientEmail && (
-            <p style={{ color: 'var(--color-text-muted)' }}>{invoice.clientEmail}</p>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+              {invoice.clientEmail}
+            </p>
           )}
         </Section>
 
@@ -267,9 +280,9 @@ export function InvoiceDetailPage() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
+                <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left' }}>
                   <th style={thStyle}>Description</th>
-                  <th style={{ ...thStyle, textAlign: 'right' }}>Qte</th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>Qté</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>Prix unitaire</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>TVA</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>HT</th>
@@ -309,17 +322,17 @@ export function InvoiceDetailPage() {
 
         <Section title="Totaux">
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <div style={{ minWidth: 320, display: 'grid', gap: 'var(--space-2)' }}>
+            <div style={{ minWidth: 340 }}>
               <TotalRow label="Total HT" value={formatMoneyMAD(invoice.netAmount)} />
               <TotalRow label="Total TVA" value={formatMoneyMAD(invoice.tvaAmount)} />
-              <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-2)' }}>
+              <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
                 <TotalRow label="Total TTC" value={formatMoneyMAD(invoice.totalAmount)} bold />
               </div>
               {(hasPayments || canRecordPayment) && (
                 <>
-                  <TotalRow label="Deja paye" value={formatMoneyMAD(invoice.paidAmount)} />
+                  <TotalRow label="Déjà payé" value={formatMoneyMAD(invoice.paidAmount)} />
                   <TotalRow
-                    label="Reste a payer"
+                    label="Reste à payer"
                     value={formatMoneyMAD(invoice.outstandingAmount)}
                     bold
                     color={outstanding > 0 ? 'var(--color-danger)' : 'var(--color-success)'}
@@ -335,10 +348,10 @@ export function InvoiceDetailPage() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
+                  <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left' }}>
                     <th style={thStyle}>Date</th>
                     <th style={thStyle}>Mode</th>
-                    <th style={thStyle}>Reference</th>
+                    <th style={thStyle}>Référence</th>
                     <th style={thStyle}>Notes</th>
                     <th style={{ ...thStyle, textAlign: 'right' }}>Montant</th>
                     <th style={{ ...thStyle, textAlign: 'right' }}></th>
@@ -366,15 +379,12 @@ export function InvoiceDetailPage() {
                           type="button"
                           onClick={() => handleDeletePayment(p)}
                           disabled={actionLoading || invoice.status === 'CANCELLED'}
-                          title="Supprimer ce paiement"
+                          className="btn-ghost"
                           style={{
-                            background: 'none',
-                            border: 'none',
                             color: 'var(--color-danger)',
-                            cursor:
-                              actionLoading || invoice.status === 'CANCELLED' ? 'not-allowed' : 'pointer',
-                            font: 'inherit',
-                            padding: 0,
+                            fontSize: 'var(--font-size-sm)',
+                            padding: 'var(--space-1) var(--space-2)',
+                            height: 'auto',
                           }}
                         >
                           Supprimer
@@ -389,7 +399,7 @@ export function InvoiceDetailPage() {
         )}
 
         {(invoice.paymentTerms || invoice.notes) && (
-          <Section title="Informations complementaires">
+          <Section title="Informations complémentaires">
             {invoice.paymentTerms && (
               <p style={{ marginBottom: invoice.notes ? 'var(--space-3)' : 0 }}>
                 <strong>Conditions de paiement :</strong> {invoice.paymentTerms}
@@ -406,8 +416,8 @@ export function InvoiceDetailPage() {
         )}
 
         {invoice.sentDate && (
-          <p style={{ color: 'var(--color-text-muted)', textAlign: 'right' }}>
-            Envoyee le {formatDateFr(invoice.sentDate.slice(0, 10))}
+          <p style={{ color: 'var(--color-text-muted)', textAlign: 'right', fontSize: 'var(--font-size-sm)' }}>
+            Envoyée le {formatDateFr(invoice.sentDate.slice(0, 10))}
           </p>
         )}
       </main>
@@ -467,16 +477,18 @@ function SendInvoiceModal({
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setError(null)
+
     if (!recipientEmail.trim()) {
       setError("L'adresse email du destinataire est obligatoire.")
       return
     }
+
     setSubmitting(true)
     try {
       const updated = await sendInvoice(invoice.id, { recipientEmail, subject, message })
       onSent(updated)
     } catch (err: unknown) {
-      setError(extractErrorMessage(err, "L'envoi de l'email a echoue."))
+      setError(extractErrorMessage(err, "L'envoi de l'email a échoué."))
     } finally {
       setSubmitting(false)
     }
@@ -485,20 +497,16 @@ function SendInvoiceModal({
   return (
     <Modal
       title="Envoyer la facture par email"
-      subtitle={
-        <>
-          {invoice.invoiceNumber} - {invoice.clientName} -{' '}
-          <strong>{formatMoneyMAD(invoice.totalAmount)}</strong>
-        </>
-      }
+      subtitle={`${invoice.invoiceNumber} - ${invoice.clientName}`}
       onClose={onClose}
       busy={submitting}
+      width={560}
     >
       {error && <div className="alert alert-error">{error}</div>}
       <form onSubmit={handleSubmit} noValidate>
         <div className="field">
-          <label htmlFor="send-recipient">
-            Adresse email du destinataire <span style={{ color: 'var(--color-danger)' }}>*</span>
+          <label htmlFor="send-recipient" className="field-label">
+            Adresse email du destinataire <span className="field-required">*</span>
           </label>
           <input
             id="send-recipient"
@@ -507,11 +515,15 @@ function SendInvoiceModal({
             onChange={(e) => setRecipientEmail(e.target.value)}
             required
             maxLength={255}
+            className="input"
             autoFocus
           />
         </div>
+
         <div className="field">
-          <label htmlFor="send-subject">Sujet (optionnel)</label>
+          <label htmlFor="send-subject" className="field-label">
+            Sujet
+          </label>
           <input
             id="send-subject"
             type="text"
@@ -519,22 +531,29 @@ function SendInvoiceModal({
             onChange={(e) => setSubject(e.target.value)}
             placeholder={defaultSubject}
             maxLength={500}
+            className="input"
           />
         </div>
+
         <div className="field">
-          <label htmlFor="send-message">Message (optionnel)</label>
+          <label htmlFor="send-message" className="field-label">
+            Message
+          </label>
           <textarea
             id="send-message"
             rows={5}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             maxLength={5000}
-            placeholder="Si vide, un message standard en francais sera envoye avec la facture en piece jointe."
+            className="textarea"
+            placeholder="Si vide, un message standard sera envoyé avec la facture en pièce jointe."
           />
         </div>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginBottom: 'var(--space-4)' }}>
-          La facture sera jointe en PDF. Une fois envoyee, son statut passera a "Envoyee".
+
+        <p className="field-hint" style={{ marginBottom: 'var(--space-5)' }}>
+          La facture sera jointe en PDF. Une fois envoyée, son statut passera à "Envoyée".
         </p>
+
         <ModalActions onClose={onClose} submitting={submitting} submitLabel="Envoyer" />
       </form>
     </Modal>
@@ -560,16 +579,18 @@ function ReminderModal({
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setError(null)
+
     if (!recipientEmail.trim()) {
       setError("L'adresse email du destinataire est obligatoire.")
       return
     }
+
     setSubmitting(true)
     try {
       const updated = await sendInvoiceReminder(invoice.id, { recipientEmail, subject, message })
       onSent(updated)
     } catch (err: unknown) {
-      setError(extractErrorMessage(err, "L'envoi de la relance a echoue."))
+      setError(extractErrorMessage(err, "L'envoi de la relance a échoué."))
     } finally {
       setSubmitting(false)
     }
@@ -578,20 +599,16 @@ function ReminderModal({
   return (
     <Modal
       title="Envoyer une relance par email"
-      subtitle={
-        <>
-          {invoice.invoiceNumber} - reste a payer{' '}
-          <strong>{formatMoneyMAD(invoice.outstandingAmount)}</strong>
-        </>
-      }
+      subtitle={`${invoice.invoiceNumber} - Reste à payer ${formatMoneyMAD(invoice.outstandingAmount)}`}
       onClose={onClose}
       busy={submitting}
+      width={560}
     >
       {error && <div className="alert alert-error">{error}</div>}
       <form onSubmit={handleSubmit} noValidate>
         <div className="field">
-          <label htmlFor="reminder-recipient">
-            Adresse email du destinataire <span style={{ color: 'var(--color-danger)' }}>*</span>
+          <label htmlFor="reminder-recipient" className="field-label">
+            Adresse email du destinataire <span className="field-required">*</span>
           </label>
           <input
             id="reminder-recipient"
@@ -600,11 +617,15 @@ function ReminderModal({
             onChange={(e) => setRecipientEmail(e.target.value)}
             required
             maxLength={255}
+            className="input"
             autoFocus
           />
         </div>
+
         <div className="field">
-          <label htmlFor="reminder-subject">Sujet (optionnel)</label>
+          <label htmlFor="reminder-subject" className="field-label">
+            Sujet
+          </label>
           <input
             id="reminder-subject"
             type="text"
@@ -612,22 +633,29 @@ function ReminderModal({
             onChange={(e) => setSubject(e.target.value)}
             placeholder={defaultSubject}
             maxLength={500}
+            className="input"
           />
         </div>
+
         <div className="field">
-          <label htmlFor="reminder-message">Message (optionnel)</label>
+          <label htmlFor="reminder-message" className="field-label">
+            Message
+          </label>
           <textarea
             id="reminder-message"
             rows={5}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             maxLength={5000}
-            placeholder="Si vide, une relance standard en francais sera envoyee avec la facture en piece jointe."
+            className="textarea"
+            placeholder="Si vide, une relance standard sera envoyée avec la facture en pièce jointe."
           />
         </div>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginBottom: 'var(--space-4)' }}>
+
+        <p className="field-hint" style={{ marginBottom: 'var(--space-5)' }}>
           La facture sera jointe en PDF. Le statut de la facture ne change pas.
         </p>
+
         <ModalActions onClose={onClose} submitting={submitting} submitLabel="Envoyer la relance" />
       </form>
     </Modal>
@@ -658,11 +686,11 @@ function RecordPaymentModal({
 
     const num = Number(amount)
     if (!Number.isFinite(num) || num <= 0) {
-      setError('Le montant doit etre superieur a zero.')
+      setError('Le montant doit être supérieur à zéro.')
       return
     }
     if (num > Number(invoice.outstandingAmount) + 0.005) {
-      setError(`Le montant depasse le restant du (${formatMoneyMAD(invoice.outstandingAmount)}).`)
+      setError(`Le montant dépasse le restant dû (${formatMoneyMAD(invoice.outstandingAmount)}).`)
       return
     }
 
@@ -686,21 +714,17 @@ function RecordPaymentModal({
   return (
     <Modal
       title="Enregistrer un paiement"
-      subtitle={
-        <>
-          {invoice.invoiceNumber} - reste a payer{' '}
-          <strong>{formatMoneyMAD(invoice.outstandingAmount)}</strong>
-        </>
-      }
+      subtitle={`${invoice.invoiceNumber} - Reste à payer ${formatMoneyMAD(invoice.outstandingAmount)}`}
       onClose={onClose}
       busy={submitting}
+      width={560}
     >
       {error && <div className="alert alert-error">{error}</div>}
       <form onSubmit={handleSubmit} noValidate>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
           <div className="field">
-            <label htmlFor="payment-amount">
-              Montant (MAD) <span style={{ color: 'var(--color-danger)' }}>*</span>
+            <label htmlFor="payment-amount" className="field-label">
+              Montant (MAD) <span className="field-required">*</span>
             </label>
             <input
               id="payment-amount"
@@ -710,12 +734,14 @@ function RecordPaymentModal({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               required
+              className="input"
               autoFocus
             />
           </div>
+
           <div className="field">
-            <label htmlFor="payment-date">
-              Date du paiement <span style={{ color: 'var(--color-danger)' }}>*</span>
+            <label htmlFor="payment-date" className="field-label">
+              Date du paiement <span className="field-required">*</span>
             </label>
             <input
               id="payment-date"
@@ -723,19 +749,21 @@ function RecordPaymentModal({
               value={paymentDate}
               onChange={(e) => setPaymentDate(e.target.value)}
               required
+              className="input"
             />
           </div>
         </div>
 
         <div className="field">
-          <label htmlFor="payment-method">
-            Mode de paiement <span style={{ color: 'var(--color-danger)' }}>*</span>
+          <label htmlFor="payment-method" className="field-label">
+            Mode de paiement <span className="field-required">*</span>
           </label>
           <select
             id="payment-method"
             value={paymentMethod}
             onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
             required
+            className="select"
           >
             <option value="BANK_TRANSFER">{PAYMENT_METHOD_LABELS.BANK_TRANSFER}</option>
             <option value="CASH">{PAYMENT_METHOD_LABELS.CASH}</option>
@@ -745,25 +773,31 @@ function RecordPaymentModal({
         </div>
 
         <div className="field">
-          <label htmlFor="payment-reference">Reference (optionnel)</label>
+          <label htmlFor="payment-reference" className="field-label">
+            Référence
+          </label>
           <input
             id="payment-reference"
             type="text"
             value={referenceNumber}
             onChange={(e) => setReferenceNumber(e.target.value)}
             maxLength={100}
-            placeholder="Ex: numero de virement, numero de cheque..."
+            className="input"
+            placeholder="Ex: numéro de virement, numéro de chèque..."
           />
         </div>
 
         <div className="field">
-          <label htmlFor="payment-notes">Notes (optionnel)</label>
+          <label htmlFor="payment-notes" className="field-label">
+            Notes
+          </label>
           <textarea
             id="payment-notes"
             rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             maxLength={1000}
+            className="textarea"
           />
         </div>
 
@@ -787,7 +821,7 @@ function ModalActions({
       <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
         Annuler
       </button>
-      <button type="submit" className="btn" disabled={submitting}>
+      <button type="submit" className="btn btn-primary" disabled={submitting}>
         {submitting ? 'Envoi en cours...' : submitLabel}
       </button>
     </div>
@@ -798,23 +832,24 @@ function extractErrorMessage(err: unknown, fallback: string): string {
   if (axios.isAxiosError(err)) {
     const body = err.response?.data as { message?: string } | undefined
     if (body?.message) return body.message
-    if (!err.response) return 'Le serveur est injoignable. Verifiez votre connexion.'
+    if (!err.response) return 'Le serveur est injoignable. Vérifiez votre connexion.'
   }
   return fallback
 }
 
 const thStyle: React.CSSProperties = {
   padding: 'var(--space-3)',
-  fontSize: '0.85rem',
-  fontWeight: 700,
+  fontSize: 'var(--font-size-xs)',
+  fontWeight: 'var(--font-weight-semibold)',
   textTransform: 'uppercase',
-  letterSpacing: '0.04em',
+  letterSpacing: '0.05em',
   color: 'var(--color-text-muted)',
 }
 
 const cellStyle: React.CSSProperties = {
   padding: 'var(--space-3)',
   verticalAlign: 'top',
+  fontSize: 'var(--font-size-sm)',
 }
 
 function TotalRow({
@@ -829,14 +864,22 @@ function TotalRow({
   color?: string
 }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: bold ? 700 : 400 }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        padding: 'var(--space-2) 0',
+        fontWeight: bold ? 700 : 400,
+      }}
+    >
       <span style={{ color: color ?? (bold ? 'var(--color-text)' : 'var(--color-text-muted)') }}>
         {label}
       </span>
       <span
         style={{
           fontVariantNumeric: 'tabular-nums',
-          fontSize: bold ? '1.15rem' : '1rem',
+          fontSize: bold ? 'var(--font-size-lg)' : 'var(--font-size-base)',
+          fontWeight: bold ? 700 : 400,
           color: color,
         }}
       >
@@ -848,26 +891,27 @@ function TotalRow({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <fieldset
+    <section
       style={{
         border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-lg)',
         padding: 'var(--space-5)',
-        marginBottom: 'var(--space-5)',
+        marginBottom: 'var(--space-6)',
         backgroundColor: 'var(--color-surface)',
       }}
     >
-      <legend
+      <h2
         style={{
-          padding: '0 var(--space-2)',
-          fontFamily: 'var(--font-serif)',
-          fontWeight: 700,
-          fontSize: '1.1rem',
+          margin: '0 0 var(--space-4) 0',
+          paddingBottom: 'var(--space-2)',
+          borderBottom: '1px solid var(--color-border-subtle)',
+          fontSize: 'var(--font-size-md)',
+          fontWeight: 'var(--font-weight-semibold)',
         }}
       >
         {title}
-      </legend>
+      </h2>
       {children}
-    </fieldset>
+    </section>
   )
 }

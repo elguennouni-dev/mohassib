@@ -10,6 +10,8 @@ import { ClientFormPage } from '../pages/ClientFormPage'
 import { InvoicesListPage } from '../pages/InvoicesListPage'
 import { InvoiceFormPage } from '../pages/InvoiceFormPage'
 import { InvoiceDetailPage } from '../pages/InvoiceDetailPage'
+import { EmployeesListPage } from '../pages/EmployeesListPage'
+import { EmployeeFormPage } from '../pages/EmployeeFormPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { ProtectedRoute } from '../auth/ProtectedRoute'
 import { RequireCompany } from '../auth/RequireCompany'
@@ -118,6 +120,37 @@ export function AppRouter() {
           <ProtectedRoute>
             <RequireCompany>
               <InvoiceFormPage />
+            </RequireCompany>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/employes"
+        element={
+          <ProtectedRoute>
+            <RequireCompany>
+              <EmployeesListPage />
+            </RequireCompany>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/employes/nouveau"
+        element={
+          <ProtectedRoute>
+            <RequireCompany>
+              <EmployeeFormPage />
+            </RequireCompany>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/employes/:id"
+        element={
+          <ProtectedRoute>
+            <RequireCompany>
+              <EmployeeFormPage />
             </RequireCompany>
           </ProtectedRoute>
         }

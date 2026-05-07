@@ -10,20 +10,25 @@ type ModalProps = {
 }
 
 export function Modal({ title, subtitle, onClose, busy, width = 560, children }: ModalProps) {
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget && !busy) {
+      onClose()
+    }
+  }
+
   return (
     <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !busy) onClose()
-      }}
+      onClick={handleBackdropClick}
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0, 0, 0, 0.45)',
+        background: 'rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(4px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 'var(--space-4)',
-        zIndex: 1000,
+        zIndex: 'var(--z-modal-backdrop)',
       }}
     >
       <div
@@ -35,7 +40,8 @@ export function Modal({ title, subtitle, onClose, busy, width = 560, children }:
           maxWidth: width,
           maxHeight: '90vh',
           overflowY: 'auto',
-          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
+          boxShadow: 'var(--shadow-modal)',
+          animation: 'modal-in 0.2s ease-out',
         }}
       >
         <div
@@ -43,14 +49,32 @@ export function Modal({ title, subtitle, onClose, busy, width = 560, children }:
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            marginBottom: 'var(--space-4)',
+            marginBottom: 'var(--space-5)',
             gap: 'var(--space-4)',
           }}
         >
-          <div>
-            <h2 style={{ marginBottom: subtitle ? 'var(--space-2)' : 0 }}>{title}</h2>
+          <div style={{ flex: 1 }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 'var(--font-size-xl)',
+                fontWeight: 'var(--font-weight-semibold)',
+                color: 'var(--color-text)',
+              }}
+            >
+              {title}
+            </h2>
             {subtitle && (
-              <div style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem' }}>{subtitle}</div>
+              <div
+                style={{
+                  marginTop: 'var(--space-2)',
+                  color: 'var(--color-text-muted)',
+                  fontSize: 'var(--font-size-sm)',
+                  lineHeight: 'var(--line-height-normal)',
+                }}
+              >
+                {subtitle}
+              </div>
             )}
           </div>
           <button
@@ -59,16 +83,34 @@ export function Modal({ title, subtitle, onClose, busy, width = 560, children }:
             disabled={busy}
             aria-label="Fermer"
             style={{
-              background: 'none',
+              background: 'var(--color-surface-2)',
               border: 'none',
-              fontSize: '1.5rem',
+              width: '32px',
+              height: '32px',
+              fontSize: '1.25rem',
+              fontWeight: 600,
               cursor: busy ? 'not-allowed' : 'pointer',
               color: 'var(--color-text-muted)',
               padding: 0,
               lineHeight: 1,
+              borderRadius: 'var(--radius-md)',
+              transition: 'all var(--transition-fast) ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onMouseEnter={(e) => {
+              if (!busy) {
+                e.currentTarget.style.backgroundColor = 'var(--color-border)'
+                e.currentTarget.style.color = 'var(--color-text)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--color-surface-2)'
+              e.currentTarget.style.color = 'var(--color-text-muted)'
             }}
           >
-            &times;
+            ×
           </button>
         </div>
         {children}
