@@ -1,122 +1,139 @@
-# Deploiement Mohassib (Contabo VPS)
+# Deploiement Mohassib (Docker sur Contabo VPS)
 
 Cible : Ubuntu 22.04 LTS, domaine `mohassib.elguennouni.site`.
+Architecture : 3 conteneurs (postgres, backend, nginx) sur un reseau Docker prive.
+Seul le conteneur `nginx` publie 80/443.
 
 ## 1. Provisionnement initial (une seule fois)
 
 ```bash
-# Utilisateur dedie
-sudo adduser --system --group --home /opt/mohassib mohassib
-sudo mkdir -p /opt/mohassib /var/log/mohassib /var/lib/mohassib/storage /var/www/mohassib /var/backups/mohassib
-sudo chown -R mohassib:mohassib /opt/mohassib /var/log/mohassib /var/lib/mohassib
-
-# Paquets
+# Docker (depot officiel)
+sudo apt update && sudo apt install -y ca-certificates curl gnupg git
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+    | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+    | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
 sudo apt update
-sudo apt install -y openjdk-21-jre-headless postgresql nginx certbot python3-certbot-nginx git nodejs npm
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Repertoires hotes
+sudo mkdir -p /opt/mohassib /var/log/mohassib /var/backups/mohassib /etc/letsencrypt
+sudo git clone https://github.com/<org>/mohassib.git /opt/mohassib/repo
 ```
 
-Java 21 est compatible avec le JAR Spring Boot 4 produit par Maven.
-
-## 2. PostgreSQL
+## 2. Configuration
 
 ```bash
-sudo -u postgres psql <<SQL
-CREATE DATABASE mohassib_db;
-CREATE USER mohassib_admin WITH ENCRYPTED PASSWORD 'change-me';
-GRANT ALL PRIVILEGES ON DATABASE mohassib_db TO mohassib_admin;
-ALTER DATABASE mohassib_db OWNER TO mohassib_admin;
-SQL
+sudo cp /opt/mohassib/repo/.env.example /opt/mohassib/repo/.env
+sudo chmod 600 /opt/mohassib/repo/.env
+sudo nano /opt/mohassib/repo/.env   # remplir POSTGRES_PASSWORD, JWT_SECRET, MAIL_*, GOOGLE_*, etc.
 ```
 
-## 3. Code et environnement
+`JWT_SECRET` :
+```bash
+openssl rand -base64 64 | tr -d '\n'
+```
+
+## 3. Premier demarrage et provisionnement TLS
+
+Le bloc HTTPS du proxy depend des certificats Let's Encrypt. Sequence :
 
 ```bash
-sudo -u mohassib git clone https://github.com/<org>/mohassib.git /opt/mohassib/repo
-sudo cp /opt/mohassib/repo/deploy/env.example /opt/mohassib/.env
-sudo chown mohassib:mohassib /opt/mohassib/.env
-sudo chmod 600 /opt/mohassib/.env
-sudo nano /opt/mohassib/.env   # remplir les secrets
+cd /opt/mohassib/repo
+
+# 3.1 Demarrer Postgres + backend en premier (le bloc 443 echouera tant qu'aucun cert n'existe).
+sudo docker compose --env-file .env -f docker-compose.prod.yml up -d postgres backend
+
+# 3.2 Demarrer nginx en mode HTTP-seul. Patch temporaire :
+#     commenter le `server { listen 443 ssl; ... }` dans frontend/nginx.conf,
+#     OU lancer nginx avec un fichier de conf reduit. Plus simple : laisser tel quel,
+#     le bloc 443 sera ignore au reload une fois les certs presents.
+sudo docker compose --env-file .env -f docker-compose.prod.yml up -d nginx
+
+# 3.3 Generer le certificat (challenge http-01 via le webroot du conteneur nginx).
+sudo DOMAIN=mohassib.elguennouni.site EMAIL=abdlilah.el.guennouni@gmail.com \
+    /opt/mohassib/repo/deploy/init-tls.sh
 ```
 
-## 4. Build et premier deploiement
+Si le bloc 443 empeche nginx de demarrer (cert absent), commenter temporairement le bloc dans `frontend/nginx.conf`, rebuild, demarrer, generer le cert, puis decommenter et redeployer.
+
+## 4. Premier schema (ddl-auto=update une seule fois)
+
+`application-prod.properties` impose `ddl-auto=validate`, ce qui echoue tant que les tables n'existent pas. Demarrage initial avec le profil dev :
 
 ```bash
-sudo -u mohassib /opt/mohassib/repo/deploy/deploy.sh
+sudo docker compose --env-file .env -f docker-compose.prod.yml stop backend
+sudo docker compose --env-file .env -f docker-compose.prod.yml run --rm \
+    -e SPRING_PROFILES_ACTIVE=default backend
+# attendre la creation du schema, puis Ctrl+C
+sudo docker compose --env-file .env -f docker-compose.prod.yml up -d backend
 ```
 
-Le premier `ddl-auto=validate` echouera si le schema n'existe pas. Pour amorcer, lancer une fois en `update` :
+Ensuite, toutes les mises a jour de schema doivent passer par Flyway (a introduire avant la beta).
+
+## 5. Pare-feu
 
 ```bash
-sudo -u mohassib SPRING_PROFILES_ACTIVE=dev java -jar /opt/mohassib/app.jar
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
 ```
 
-Arreter une fois les tables creees, puis enchainer avec systemd (profil `prod`).
+Postgres reste sur le reseau Docker interne, jamais expose.
 
-## 5. systemd
-
-```bash
-sudo cp /opt/mohassib/repo/deploy/mohassib.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now mohassib
-sudo journalctl -u mohassib -f
-```
-
-## 6. Nginx + TLS
-
-```bash
-sudo cp /opt/mohassib/repo/deploy/nginx.conf /etc/nginx/sites-available/mohassib
-sudo ln -s /etc/nginx/sites-available/mohassib /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
-sudo nginx -t
-sudo systemctl reload nginx
-
-# Certificat Let's Encrypt
-sudo certbot --nginx -d mohassib.elguennouni.site
-sudo systemctl status certbot.timer   # renouvellement auto
-```
-
-## 7. Sauvegardes Postgres
+## 6. Sauvegardes
 
 ```bash
 sudo cp /opt/mohassib/repo/deploy/backup.sh /opt/mohassib/backup.sh
 sudo chmod 750 /opt/mohassib/backup.sh
-sudo chown mohassib:mohassib /opt/mohassib/backup.sh
 
-# Cron : 02h00 UTC chaque jour
-echo '0 2 * * * mohassib /opt/mohassib/backup.sh >> /var/log/mohassib/backup.log 2>&1' \
+echo '0 2 * * * root /opt/mohassib/repo/deploy/backup.sh >> /var/log/mohassib/backup.log 2>&1' \
     | sudo tee /etc/cron.d/mohassib-backup
 ```
 
-Retention : 14 jours sur disque. Pour un mirroir hors-site, `rsync` ou `rclone` le contenu de `/var/backups/mohassib/` vers un stockage distant.
+Retention 14 jours dans `/var/backups/mohassib/`. Mirroring distant : `rclone sync /var/backups/mohassib remote:mohassib-backups` dans la meme cron.
 
-## 8. Pare-feu
-
-```bash
-sudo ufw allow OpenSSH
-sudo ufw allow 'Nginx Full'
-sudo ufw enable
-```
-
-Postgres reste ferme aux connexions externes (port 5432 non expose).
-
-## 9. Mises a jour
-
-Apres chaque commit sur `main` :
+## 7. Renouvellement TLS
 
 ```bash
-sudo -u mohassib /opt/mohassib/repo/deploy/deploy.sh
+echo '0 3 * * * root /opt/mohassib/repo/deploy/renew-tls.sh >> /var/log/mohassib/tls.log 2>&1' \
+    | sudo tee /etc/cron.d/mohassib-tls
 ```
 
-Rollback rapide :
+## 8. Mises a jour applicatives
 
 ```bash
-sudo -u mohassib bash -c 'cd /opt/mohassib/repo && git reset --hard <sha-precedent> && /opt/mohassib/repo/deploy/deploy.sh'
+sudo /opt/mohassib/repo/deploy/deploy.sh
 ```
 
-## 10. Verification post-deploiement
+Le script fait `git pull`, rebuild les images backend + nginx, redeploie sans toucher a Postgres, et purge les images orphelines.
 
-- `https://mohassib.elguennouni.site` charge la SPA
-- `https://mohassib.elguennouni.site/api/v1/auth/login` repond 400 (champs requis) ou 405
-- En-tetes : `Strict-Transport-Security`, `X-Frame-Options: DENY` presents
-- `journalctl -u mohassib --since '5 min ago'` n'affiche aucun stack trace
-- `tail -f /var/log/mohassib/mohassib.log` confirme l'ecriture des logs applicatifs
+Rollback :
+```bash
+sudo bash -c '
+    cd /opt/mohassib/repo
+    git reset --hard <sha-precedent>
+    /opt/mohassib/repo/deploy/deploy.sh
+'
+```
+
+## 9. Verification post-deploiement
+
+- `https://mohassib.elguennouni.site` charge la SPA.
+- `https://mohassib.elguennouni.site/api/v1/actuator/health` repond `{"status":"UP"}`.
+- En-tetes presents : `Strict-Transport-Security`, `X-Frame-Options: DENY`, `X-Content-Type-Options`, `Referrer-Policy`.
+- `docker compose ps` : tous les services en `healthy`.
+- `docker compose logs -f backend` : aucune stack trace.
+- Les fichiers generes (PDFs, audit logs) persistent apres `docker compose down && up -d`.
+
+## 10. Restauration d'une sauvegarde
+
+```bash
+gunzip -c /var/backups/mohassib/mohassib_YYYYMMDD_HHMMSS.sql.gz \
+    | sudo docker exec -i $(sudo docker compose --env-file /opt/mohassib/repo/.env \
+        -f /opt/mohassib/repo/docker-compose.prod.yml ps -q postgres) \
+        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+```

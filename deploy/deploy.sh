@@ -1,27 +1,23 @@
 #!/usr/bin/env bash
-# Build + deploy in place on the VPS. Run as the mohassib user from a clone of the repo.
-#   sudo -u mohassib /opt/mohassib/repo/deploy/deploy.sh
+# Pull latest code, rebuild containers, restart the stack. Run on the VPS.
+#   sudo /opt/mohassib/repo/deploy/deploy.sh
 set -euo pipefail
 
 REPO_DIR="${REPO_DIR:-/opt/mohassib/repo}"
-APP_DIR="${APP_DIR:-/opt/mohassib}"
-WEB_DIR="${WEB_DIR:-/var/www/mohassib}"
+COMPOSE_FILE="$REPO_DIR/docker-compose.prod.yml"
+ENV_FILE="$REPO_DIR/.env"
 
 cd "$REPO_DIR"
 git fetch --all --prune
 git reset --hard origin/main
 
-# Backend.
-( cd backend && ./mvnw -q -DskipTests clean package )
-JAR="$(ls -1 backend/target/mohassib-*.jar | head -n1)"
-cp -f "$JAR" "$APP_DIR/app.jar.new"
-mv -f "$APP_DIR/app.jar.new" "$APP_DIR/app.jar"
+# Build and roll. --no-deps avoids restarting postgres on every code push.
+docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build backend nginx
+docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --no-deps backend nginx
 
-# Frontend.
-( cd frontend && npm ci && npm run build )
-sudo rsync -a --delete frontend/dist/ "$WEB_DIR/"
+# Reap dangling images from the previous build.
+docker image prune -f
 
-# Restart backend.
-sudo systemctl restart mohassib
-
+echo
+docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps
 echo "Deployment OK"

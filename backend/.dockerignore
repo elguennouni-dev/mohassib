@@ -1,4 +1,10 @@
-target
-.idea
+target/
+.idea/
+.vscode/
 .env
 *.iml
+*.log
+logs/
+storage/
+HELP.md
+.mvn/wrapper/maven-wrapper.jar

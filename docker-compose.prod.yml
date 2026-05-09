@@ -1,0 +1,98 @@
+name: mohassib
+
+# Three-container production stack: postgres, backend, nginx (edge proxy + SPA).
+# All services share a private bridge network. Only nginx publishes 80/443.
+# Backups are taken from the postgres container by deploy/backup.sh on the host.
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - mohassib-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # Postgres is reachable only via the internal docker network, never published.
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: mohassib-backend:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8080
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TTL_MIN: ${JWT_ACCESS_TTL_MIN:-60}
+      JWT_REFRESH_TTL_DAYS: ${JWT_REFRESH_TTL_DAYS:-30}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      FILES_DIR: /app/storage
+      LOG_DIR: /app/logs
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_SMTP_SSL: ${MAIL_SMTP_SSL:-true}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-false}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      PAYROLL_CNSS_RATE: ${PAYROLL_CNSS_RATE:-0.0448}
+      PAYROLL_CNSS_CEILING: ${PAYROLL_CNSS_CEILING:-6000}
+      PAYROLL_IR_BRACKETS: ${PAYROLL_IR_BRACKETS:-0:0,2500:0.10,8333:0.20,17500:0.30,30000:0.34}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    volumes:
+      - backend-storage:/app/storage
+      - backend-logs:/app/logs
+    networks:
+      - mohassib-net
+    # Healthcheck inherits from the Dockerfile (curl /actuator/health).
+
+  nginx:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+    image: mohassib-nginx:latest
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Let's Encrypt certificates (mounted read-only from the host).
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Webroot used by certbot for the http-01 challenge.
+      - certbot-webroot:/var/www/certbot
+    networks:
+      - mohassib-net
+
+networks:
+  mohassib-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  backend-storage:
+  backend-logs:
+  certbot-webroot:
