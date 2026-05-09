@@ -2,6 +2,8 @@ package com.elguennouni.mohassib.service;
 
 import com.elguennouni.mohassib.entity.Company;
 import com.elguennouni.mohassib.entity.Invoice;
+import com.elguennouni.mohassib.entity.Payroll;
+import com.elguennouni.mohassib.entity.SalarySlip;
 import com.elguennouni.mohassib.exception.EmailSendingException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -54,6 +56,72 @@ public class EmailService {
                 buildSubject(invoice, company, customSubject),
                 buildBody(invoice, company, customMessage)
         );
+    }
+
+    public void sendSalarySlipEmail(
+            SalarySlip slip,
+            Payroll payroll,
+            Company company,
+            byte[] pdf,
+            String recipientEmail
+    ) {
+        String filename = "bulletin-" + payroll.getYear() + "-"
+                + String.format("%02d", payroll.getMonth()) + "-"
+                + slip.getEmployeeLastName().toLowerCase().replaceAll("\\s+", "-")
+                + ".pdf";
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromAddress, fromName);
+            helper.setReplyTo(company.getEmail());
+            helper.setTo(recipientEmail);
+            helper.setSubject(buildSalarySlipSubject(slip, payroll));
+            helper.setText(buildSalarySlipBody(slip, payroll, company), true);
+            helper.addAttachment(filename, new ByteArrayResource(pdf));
+
+            mailSender.send(message);
+        } catch (MessagingException | UnsupportedEncodingException | MailException ex) {
+            throw new EmailSendingException(
+                    "L'envoi du bulletin de paie a echoue pour " + slip.getEmployeeFirstName()
+                            + " " + slip.getEmployeeLastName() + ".",
+                    ex
+            );
+        }
+    }
+
+    private String buildSalarySlipSubject(SalarySlip slip, Payroll payroll) {
+        return "Bulletin de paie " + formatPeriod(payroll.getMonth(), payroll.getYear());
+    }
+
+    private String buildSalarySlipBody(SalarySlip slip, Payroll payroll, Company company) {
+        return """
+                <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1a1a1a; line-height: 1.5;">
+                  <p>Bonjour %s,</p>
+                  <p>Veuillez trouver ci-joint votre bulletin de paie pour la periode <strong>%s</strong>.</p>
+                  <p>Salaire net : <strong>%s</strong></p>
+                  <p>Pour toute question, n'hesitez pas a nous contacter.</p>
+                  <p>Cordialement,<br>
+                  <strong>%s</strong><br>
+                  %s</p>
+                </div>
+                """.formatted(
+                        escape(slip.getEmployeeFirstName()),
+                        formatPeriod(payroll.getMonth(), payroll.getYear()),
+                        formatMoney(slip.getNetSalary()),
+                        escape(company.getName()),
+                        escape(company.getEmail())
+                );
+    }
+
+    private static final String[] MONTH_NAMES_FR = {
+            "janvier", "fevrier", "mars", "avril", "mai", "juin",
+            "juillet", "aout", "septembre", "octobre", "novembre", "decembre"
+    };
+
+    private static String formatPeriod(int month, int year) {
+        String name = (month >= 1 && month <= 12) ? MONTH_NAMES_FR[month - 1] : String.valueOf(month);
+        return name + " " + year;
     }
 
     public void sendInvoiceReminderEmail(

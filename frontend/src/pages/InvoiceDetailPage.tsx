@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import axios from 'axios'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AppHeader } from '../components/AppHeader'
 import { Modal } from '../components/Modal'
 import { StatusBadge } from './InvoicesListPage'
 import {
@@ -132,7 +131,6 @@ export function InvoiceDetailPage() {
   if (loading) {
     return (
       <>
-        <AppHeader />
         <main className="container" style={{ padding: 'var(--space-8) var(--space-5)' }}>
           <div style={{ textAlign: 'center', padding: 'var(--space-12)' }}>
             <div className="spinner" style={{ width: 32, height: 32, margin: '0 auto var(--space-4)' }} />
@@ -146,7 +144,6 @@ export function InvoiceDetailPage() {
   if (error || !invoice) {
     return (
       <>
-        <AppHeader />
         <main className="container" style={{ padding: 'var(--space-8) var(--space-5)' }}>
           <p style={{ marginBottom: 'var(--space-3)' }}>
             <Link to="/factures">← Retour à la liste</Link>
@@ -168,7 +165,6 @@ export function InvoiceDetailPage() {
 
   return (
     <>
-      <AppHeader />
       <main className="container" style={{ padding: 'var(--space-8) var(--space-5)', maxWidth: 1200 }}>
         <p style={{ marginBottom: 'var(--space-3)' }}>
           <Link to="/factures">← Retour à la liste</Link>

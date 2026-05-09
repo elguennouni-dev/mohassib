@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AppHeader } from '../components/AppHeader'
 import {
   buildEmptyEmployeeForm,
   createEmployee,
@@ -105,7 +104,6 @@ export function EmployeeFormPage() {
 
   return (
     <>
-      <AppHeader />
       <main className="container" style={{ padding: 'var(--space-8) var(--space-5)', maxWidth: 880 }}>
         <p style={{ marginBottom: 'var(--space-3)' }}>
           <Link to="/employes">← Retour à la liste</Link>

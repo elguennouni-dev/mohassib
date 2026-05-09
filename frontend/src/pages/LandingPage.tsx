@@ -95,6 +95,57 @@ export function LandingPage() {
               fontSize: 'clamp(1.5rem, 4vw, 2rem)',
             }}
           >
+            Comment ça marche
+          </h2>
+          <p
+            style={{
+              textAlign: 'center',
+              color: 'var(--color-text-muted)',
+              marginBottom: 'var(--space-10)',
+            }}
+          >
+            En quatre étapes, votre comptabilité est en place.
+          </p>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: 'var(--space-6)',
+            }}
+          >
+            <Step
+              number={1}
+              title="Créez votre compte"
+              description="Inscription gratuite en moins d'une minute, par email."
+            />
+            <Step
+              number={2}
+              title="Configurez votre entreprise"
+              description="Renseignez ICE, RC, CNSS et coordonnées. Ces informations apparaîtront sur vos factures et bulletins."
+            />
+            <Step
+              number={3}
+              title="Émettez vos premières factures"
+              description="Ajoutez vos clients, créez une facture, calculez la TVA et envoyez-la par email en un clic."
+            />
+            <Step
+              number={4}
+              title="Pilotez votre activité"
+              description="Tableau de bord en temps réel, paie automatique, déclarations TVA mensuelles prêtes pour la DGI."
+            />
+          </div>
+        </div>
+      </section>
+
+      <section style={{ padding: 'var(--space-16) 0' }}>
+        <div className="container">
+          <h2
+            style={{
+              textAlign: 'center',
+              marginBottom: 'var(--space-3)',
+              fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+            }}
+          >
             Tarifs simples
           </h2>
           <p
@@ -145,6 +196,96 @@ export function LandingPage() {
               subtitle="par mois"
               features={['Tout Professional', 'Support dédié', 'Employés illimités', 'API personnalisée']}
             />
+          </div>
+        </div>
+      </section>
+
+      <section style={{ padding: 'var(--space-16) 0', backgroundColor: 'var(--color-surface-2)' }}>
+        <div className="container" style={{ maxWidth: 760 }}>
+          <h2
+            style={{
+              textAlign: 'center',
+              marginBottom: 'var(--space-3)',
+              fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+            }}
+          >
+            Questions fréquentes
+          </h2>
+          <p
+            style={{
+              textAlign: 'center',
+              color: 'var(--color-text-muted)',
+              marginBottom: 'var(--space-10)',
+            }}
+          >
+            Tout ce que vous devez savoir avant de commencer.
+          </p>
+          <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
+            <FaqItem
+              question="Mes factures sont-elles conformes à la réglementation marocaine ?"
+              answer="Oui. Chaque facture inclut votre ICE, RC, CNSS, le détail HT/TVA/TTC par taux (20%, 10%, 7%, 0%) et la mention légale obligatoire."
+            />
+            <FaqItem
+              question="Comment fonctionne le calcul de la paie ?"
+              answer="Mohassib calcule automatiquement la cotisation CNSS (4,48% plafonnée à 6 000 MAD) et l'IR selon les barèmes progressifs marocains. Les barèmes sont configurables si la DGI les met à jour."
+            />
+            <FaqItem
+              question="Puis-je télécharger les déclarations TVA pour les soumettre à la DGI ?"
+              answer="Oui. Chaque déclaration mensuelle est exportable en PDF, prête à être vérifiée puis soumise à la DGI."
+            />
+            <FaqItem
+              question="Mes données sont-elles sécurisées ?"
+              answer="Toutes les communications passent en HTTPS, les mots de passe sont chiffrés (BCrypt) et chaque entreprise n'a accès qu'à ses propres données. Une sauvegarde quotidienne de la base est effectuée."
+            />
+            <FaqItem
+              question="Y a-t-il un engagement de durée ?"
+              answer="Non. Vous pouvez résilier votre abonnement à tout moment, sans pénalité. Vos données restent exportables même après résiliation."
+            />
+            <FaqItem
+              question="Puis-je essayer avant de payer ?"
+              answer="Oui. Le plan Gratuit permet d'émettre jusqu'à 10 factures par mois sans frais et sans carte bancaire. Vous pouvez basculer vers un plan payant quand vous êtes prêt."
+            />
+            <FaqItem
+              question="Comment obtenir de l'aide ?"
+              answer="Notre support répond par email ou WhatsApp dans un délai de 4 heures ouvrées. Le support prioritaire est inclus dans les plans Professional et Enterprise."
+            />
+          </div>
+        </div>
+      </section>
+
+      <section style={{ padding: 'var(--space-16) 0' }}>
+        <div className="container" style={{ maxWidth: 720, textAlign: 'center' }}>
+          <h2
+            style={{
+              marginBottom: 'var(--space-3)',
+              fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+            }}
+          >
+            Une question ? Parlons-en.
+          </h2>
+          <p
+            style={{
+              color: 'var(--color-text-muted)',
+              marginBottom: 'var(--space-6)',
+            }}
+          >
+            Écrivez-nous par email ou contactez-nous directement sur WhatsApp.
+          </p>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a
+              href="mailto:abdlilah.el.guennouni@gmail.com?subject=Demande%20d%27information%20Mohassib"
+              className="btn btn-primary"
+            >
+              Envoyer un email
+            </a>
+            <a
+              href="https://wa.me/212680376294"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+            >
+              Contacter sur WhatsApp
+            </a>
           </div>
         </div>
       </section>
@@ -297,5 +438,87 @@ function PriceCard({
         ))}
       </ul>
     </div>
+  )
+}
+
+function Step({ number, title, description }: { number: number; title: string; description: string }) {
+  return (
+    <div
+      style={{
+        padding: 'var(--space-6)',
+        backgroundColor: 'var(--color-surface)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-lg)',
+      }}
+    >
+      <div
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 36,
+          height: 36,
+          borderRadius: '50%',
+          backgroundColor: 'var(--color-primary-light)',
+          color: 'var(--color-primary)',
+          fontWeight: 700,
+          fontSize: 'var(--font-size-lg)',
+          marginBottom: 'var(--space-3)',
+        }}
+      >
+        {number}
+      </div>
+      <h3 style={{ marginBottom: 'var(--space-2)', fontSize: 'var(--font-size-lg)' }}>{title}</h3>
+      <p
+        style={{
+          color: 'var(--color-text-secondary)',
+          lineHeight: 'var(--line-height-relaxed)',
+          fontSize: 'var(--font-size-sm)',
+        }}
+      >
+        {description}
+      </p>
+    </div>
+  )
+}
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  return (
+    <details
+      style={{
+        backgroundColor: 'var(--color-surface)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-md)',
+        padding: 'var(--space-4) var(--space-5)',
+      }}
+    >
+      <summary
+        style={{
+          fontWeight: 600,
+          cursor: 'pointer',
+          fontSize: 'var(--font-size-base)',
+          listStyle: 'none',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 'var(--space-3)',
+        }}
+      >
+        <span>{question}</span>
+        <span aria-hidden="true" style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-lg)' }}>
+          +
+        </span>
+      </summary>
+      <p
+        style={{
+          marginTop: 'var(--space-3)',
+          color: 'var(--color-text-secondary)',
+          lineHeight: 'var(--line-height-relaxed)',
+          fontSize: 'var(--font-size-sm)',
+        }}
+      >
+        {answer}
+      </p>
+    </details>
   )
 }

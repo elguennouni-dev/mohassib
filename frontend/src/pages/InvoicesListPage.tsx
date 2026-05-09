@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
-import { AppHeader } from '../components/AppHeader'
 import {
   formatDateFr,
   formatMoneyMAD,
@@ -79,7 +78,6 @@ export function InvoicesListPage() {
 
   return (
     <>
-      <AppHeader />
       <main className="container" style={{ padding: 'var(--space-8) var(--space-5)' }}>
         <div
           style={{

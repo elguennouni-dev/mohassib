@@ -58,4 +58,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             @Param("search") String search,
             Pageable pageable
     );
+
+    long countByCompanyIdAndStatus(Long companyId, EmployeeStatus status);
 }

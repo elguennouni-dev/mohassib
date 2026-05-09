@@ -33,4 +33,30 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
             @Param("search") String search,
             Pageable pageable
     );
+
+    @Query("""
+            SELECT COALESCE(SUM(e.baseAmount), 0)
+            FROM Expense e
+            WHERE e.companyId = :companyId
+              AND e.expenseDate >= :from
+              AND e.expenseDate <= :to
+            """)
+    java.math.BigDecimal sumBaseByDateRange(
+            @Param("companyId") Long companyId,
+            @Param("from") java.time.LocalDate from,
+            @Param("to") java.time.LocalDate to
+    );
+
+    @Query("""
+            SELECT COALESCE(SUM(e.totalAmount), 0)
+            FROM Expense e
+            WHERE e.companyId = :companyId
+              AND e.expenseDate >= :from
+              AND e.expenseDate <= :to
+            """)
+    java.math.BigDecimal sumTotalByDateRange(
+            @Param("companyId") Long companyId,
+            @Param("from") java.time.LocalDate from,
+            @Param("to") java.time.LocalDate to
+    );
 }

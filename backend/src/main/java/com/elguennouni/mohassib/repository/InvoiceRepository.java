@@ -74,4 +74,135 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
               AND i.dueDate < :today
             """)
     int flagOverdueAsOf(@Param("today") LocalDate today);
+
+    /* Reporting / dashboard aggregations.
+       Revenue excludes DRAFT and CANCELLED invoices.
+       Outstanding = SENT or OVERDUE. */
+
+    @Query("""
+            SELECT COALESCE(SUM(i.totalAmount), 0)
+            FROM Invoice i
+            WHERE i.companyId = :companyId
+              AND i.status NOT IN (
+                com.elguennouni.mohassib.entity.InvoiceStatus.DRAFT,
+                com.elguennouni.mohassib.entity.InvoiceStatus.CANCELLED
+              )
+              AND i.invoiceDate >= :from
+              AND i.invoiceDate <= :to
+            """)
+    java.math.BigDecimal sumRevenueByDateRange(
+            @Param("companyId") Long companyId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to
+    );
+
+    @Query("""
+            SELECT COALESCE(SUM(i.tvaAmount), 0)
+            FROM Invoice i
+            WHERE i.companyId = :companyId
+              AND i.status NOT IN (
+                com.elguennouni.mohassib.entity.InvoiceStatus.DRAFT,
+                com.elguennouni.mohassib.entity.InvoiceStatus.CANCELLED
+              )
+              AND i.invoiceDate >= :from
+              AND i.invoiceDate <= :to
+            """)
+    java.math.BigDecimal sumTvaByDateRange(
+            @Param("companyId") Long companyId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to
+    );
+
+    @Query("""
+            SELECT COUNT(i)
+            FROM Invoice i
+            WHERE i.companyId = :companyId
+              AND i.status IN (
+                com.elguennouni.mohassib.entity.InvoiceStatus.SENT,
+                com.elguennouni.mohassib.entity.InvoiceStatus.OVERDUE
+              )
+            """)
+    long countOutstanding(@Param("companyId") Long companyId);
+
+    @Query("""
+            SELECT COALESCE(SUM(i.totalAmount), 0)
+            FROM Invoice i
+            WHERE i.companyId = :companyId
+              AND i.status IN (
+                com.elguennouni.mohassib.entity.InvoiceStatus.SENT,
+                com.elguennouni.mohassib.entity.InvoiceStatus.OVERDUE
+              )
+            """)
+    java.math.BigDecimal sumOutstanding(@Param("companyId") Long companyId);
+
+    @Query("""
+            SELECT COUNT(i)
+            FROM Invoice i
+            WHERE i.companyId = :companyId
+              AND i.status = com.elguennouni.mohassib.entity.InvoiceStatus.OVERDUE
+            """)
+    long countOverdue(@Param("companyId") Long companyId);
+
+    @Query("""
+            SELECT COALESCE(SUM(i.totalAmount), 0)
+            FROM Invoice i
+            WHERE i.companyId = :companyId
+              AND i.status = com.elguennouni.mohassib.entity.InvoiceStatus.OVERDUE
+            """)
+    java.math.BigDecimal sumOverdue(@Param("companyId") Long companyId);
+
+    @Query("""
+            SELECT COUNT(i)
+            FROM Invoice i
+            WHERE i.companyId = :companyId
+              AND i.status NOT IN (
+                com.elguennouni.mohassib.entity.InvoiceStatus.DRAFT,
+                com.elguennouni.mohassib.entity.InvoiceStatus.CANCELLED
+              )
+              AND i.invoiceDate >= :from
+              AND i.invoiceDate <= :to
+            """)
+    long countByDateRange(
+            @Param("companyId") Long companyId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to
+    );
+
+    @Query("""
+            SELECT COUNT(i)
+            FROM Invoice i
+            WHERE i.companyId = :companyId
+              AND i.paymentStatus = com.elguennouni.mohassib.entity.PaymentStatus.PAID
+              AND i.status NOT IN (
+                com.elguennouni.mohassib.entity.InvoiceStatus.DRAFT,
+                com.elguennouni.mohassib.entity.InvoiceStatus.CANCELLED
+              )
+              AND i.invoiceDate >= :from
+              AND i.invoiceDate <= :to
+            """)
+    long countPaidByDateRange(
+            @Param("companyId") Long companyId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to
+    );
+
+    @Query("""
+            SELECT COALESCE(SUM(i.totalAmount), 0)
+            FROM Invoice i
+            WHERE i.companyId = :companyId
+              AND i.paymentStatus = com.elguennouni.mohassib.entity.PaymentStatus.PAID
+              AND i.status NOT IN (
+                com.elguennouni.mohassib.entity.InvoiceStatus.DRAFT,
+                com.elguennouni.mohassib.entity.InvoiceStatus.CANCELLED
+              )
+              AND i.invoiceDate >= :from
+              AND i.invoiceDate <= :to
+            """)
+    java.math.BigDecimal sumPaidByDateRange(
+            @Param("companyId") Long companyId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to
+    );
+
+    java.util.List<Invoice> findTop5ByCompanyIdOrderByCreatedAtDesc(Long companyId);
 }

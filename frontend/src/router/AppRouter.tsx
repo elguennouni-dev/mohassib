@@ -12,6 +12,12 @@ import { InvoiceFormPage } from '../pages/InvoiceFormPage'
 import { InvoiceDetailPage } from '../pages/InvoiceDetailPage'
 import { EmployeesListPage } from '../pages/EmployeesListPage'
 import { EmployeeFormPage } from '../pages/EmployeeFormPage'
+import { PayrollListPage } from '../pages/PayrollListPage'
+import { PayrollDetailPage } from '../pages/PayrollDetailPage'
+import { ExpensesListPage } from '../pages/ExpensesListPage'
+import { ExpenseFormPage } from '../pages/ExpenseFormPage'
+import { TvaPage } from '../pages/TvaPage'
+import { ReportsPage } from '../pages/ReportsPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { ProtectedRoute } from '../auth/ProtectedRoute'
 import { RequireCompany } from '../auth/RequireCompany'
@@ -151,6 +157,80 @@ export function AppRouter() {
           <ProtectedRoute>
             <RequireCompany>
               <EmployeeFormPage />
+            </RequireCompany>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/paie"
+        element={
+          <ProtectedRoute>
+            <RequireCompany>
+              <PayrollListPage />
+            </RequireCompany>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/paie/:id"
+        element={
+          <ProtectedRoute>
+            <RequireCompany>
+              <PayrollDetailPage />
+            </RequireCompany>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/depenses"
+        element={
+          <ProtectedRoute>
+            <RequireCompany>
+              <ExpensesListPage />
+            </RequireCompany>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/depenses/nouvelle"
+        element={
+          <ProtectedRoute>
+            <RequireCompany>
+              <ExpenseFormPage />
+            </RequireCompany>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/depenses/:id"
+        element={
+          <ProtectedRoute>
+            <RequireCompany>
+              <ExpenseFormPage />
+            </RequireCompany>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/tva"
+        element={
+          <ProtectedRoute>
+            <RequireCompany>
+              <TvaPage />
+            </RequireCompany>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/rapports"
+        element={
+          <ProtectedRoute>
+            <RequireCompany>
+              <ReportsPage />
             </RequireCompany>
           </ProtectedRoute>
         }

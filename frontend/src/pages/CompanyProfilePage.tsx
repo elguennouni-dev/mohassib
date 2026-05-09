@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { useAuth } from '../auth/AuthContext'
-import { AppHeader } from '../components/AppHeader'
 import { CompanyForm } from '../components/CompanyForm'
 import { companyToForm, updateCompany, type CompanyFormValues } from '../api/company'
 
@@ -66,7 +65,6 @@ export function CompanyProfilePage() {
 
   return (
     <>
-      <AppHeader />
       <main className="container" style={{ padding: 'var(--space-8) var(--space-5)', maxWidth: 880 }}>
         <h1 style={{ marginBottom: 'var(--space-3)' }}>Mon entreprise</h1>
         <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-6)' }}>

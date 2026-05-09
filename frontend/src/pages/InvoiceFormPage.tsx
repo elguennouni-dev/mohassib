@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AppHeader } from '../components/AppHeader'
 import {
   buildEmptyInvoiceForm,
   computeInvoiceTotals,
@@ -154,8 +153,7 @@ export function InvoiceFormPage() {
   if (loading) {
     return (
       <>
-        <AppHeader />
-        <main className="container" style={{ padding: 'var(--space-8) var(--space-5)' }}>
+          <main className="container" style={{ padding: 'var(--space-8) var(--space-5)' }}>
           <div style={{ textAlign: 'center', padding: 'var(--space-12)' }}>
             <div className="spinner" style={{ width: 32, height: 32, margin: '0 auto var(--space-4)' }} />
             <p style={{ color: 'var(--color-text-muted)' }}>Chargement du formulaire...</p>
@@ -167,7 +165,6 @@ export function InvoiceFormPage() {
 
   return (
     <>
-      <AppHeader />
       <main className="container" style={{ padding: 'var(--space-8) var(--space-5)', maxWidth: 1200 }}>
         <p style={{ marginBottom: 'var(--space-3)' }}>
           <Link to="/factures">← Retour à la liste</Link>

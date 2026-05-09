@@ -39,6 +39,7 @@ public class PayrollService {
     private final PayrollCalculationService calculationService;
     private final SalarySlipPdfService pdfService;
     private final EmailService emailService;
+    private final AuditService auditService;
 
     public record SalarySlipPdf(String filename, byte[] bytes) {}
 
@@ -154,6 +155,7 @@ public class PayrollService {
                 .findByPayrollIdOrderByEmployeeLastNameAscEmployeeFirstNameAsc(payroll.getId());
         slipRepository.deleteAll(slips);
         payrollRepository.delete(payroll);
+        auditService.log(companyId, "PAYROLL_DELETE", "Payroll", payrollId);
     }
 
     @Transactional
@@ -197,6 +199,8 @@ public class PayrollService {
         payroll.setProcessedAt(now);
         log.info("Paie {} (mois={}, annee={}) traitee : {} envoye(s), {} sans email",
                 payroll.getId(), payroll.getMonth(), payroll.getYear(), sentCount, skippedCount);
+        auditService.log(companyId, "PAYROLL_PROCESS", "Payroll", payroll.getId(),
+                "sent=" + sentCount + " skipped=" + skippedCount);
 
         List<SalarySlip> refreshed = slipRepository
                 .findByPayrollIdOrderByEmployeeLastNameAscEmployeeFirstNameAsc(payroll.getId());

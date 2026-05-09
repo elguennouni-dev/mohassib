@@ -2,7 +2,6 @@ import { useState } from 'react'
 import axios from 'axios'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { AppHeader } from '../components/AppHeader'
 import { CompanyForm } from '../components/CompanyForm'
 import { createCompany, emptyCompanyForm, type CompanyFormValues } from '../api/company'
 
@@ -65,7 +64,6 @@ export function CompanyOnboardingPage() {
 
   return (
     <>
-      <AppHeader />
       <main className="container" style={{ padding: 'var(--space-8) var(--space-5)', maxWidth: 960 }}>
         <div style={{ marginBottom: 'var(--space-6)' }}>
           <h1 style={{ marginBottom: 'var(--space-2)', fontSize: 'var(--font-size-2xl)' }}>

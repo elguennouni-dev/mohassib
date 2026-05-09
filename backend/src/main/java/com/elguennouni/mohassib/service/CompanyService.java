@@ -17,6 +17,7 @@ import java.util.Optional;
 public class CompanyService {
 
     private final CompanyRepository companyRepository;
+    private final AuditService auditService;
 
     @Transactional(readOnly = true)
     public Optional<Company> findByUserId(Long userId) {
@@ -83,6 +84,7 @@ public class CompanyService {
         company.setEmployeesCount(request.employeesCount());
         company.setFiscalYearStart(request.fiscalYearStart());
 
+        auditService.log(company.getId(), "COMPANY_UPDATE", "Company", company.getId());
         return CompanyResponse.from(company);
     }
 

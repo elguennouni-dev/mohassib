@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mohassib_db
+      POSTGRES_USER: mohassib_user
+      POSTGRES_PASSWORD: mohassib_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mohassib_user -d mohassib_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/mohassib_db
+      DB_USER: mohassib_user
+      DB_PASSWORD: mohassib_password
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      FILES_DIR: /app/storage
+      JWT_SECRET: ZGV2LW9ubHktSk5UU2VjcmV0LU5PVC1mb3ItcHJvZHVjdGlvbi1taW4tMjU2LWJpdHM=
+    ports:
+      - "8080:8080"
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: /api/v1
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  app_storage:

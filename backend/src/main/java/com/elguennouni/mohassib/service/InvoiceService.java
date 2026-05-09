@@ -53,6 +53,8 @@ public class InvoiceService {
     private final CompanyService companyService;
     private final InvoicePdfService invoicePdfService;
     private final EmailService emailService;
+    private final TVAEntryService tvaEntryService;
+    private final AuditService auditService;
 
     public record InvoicePdf(String filename, byte[] bytes) {}
 
@@ -148,6 +150,7 @@ public class InvoiceService {
             throw new InvalidInvoiceStateException("Seules les factures en brouillon peuvent etre supprimees.");
         }
         invoiceRepository.delete(invoice);
+        auditService.log(companyId, "INVOICE_DELETE", "Invoice", invoiceId);
     }
 
     @Transactional
@@ -167,7 +170,11 @@ public class InvoiceService {
         invoice.setStatus(InvoiceStatus.SENT);
         invoice.setSentDate(LocalDateTime.now());
 
-        // If the email send fails, @Transactional rolls back the SENT status above.
+        // Mirror this invoice into the TVA ledger (one entry per TVA rate).
+        tvaEntryService.recordSalesForInvoice(invoice);
+
+        // If the email send fails, @Transactional rolls back the SENT status above
+        // AND the TVA entries we just recorded (same transaction).
         emailService.sendInvoiceEmail(
                 invoice,
                 company,
@@ -176,6 +183,9 @@ public class InvoiceService {
                 request.subject(),
                 request.message()
         );
+
+        auditService.log(companyId, "INVOICE_SEND", "Invoice", invoice.getId(),
+                "to=" + request.recipientEmail());
 
         return InvoiceResponse.from(
                 invoice,
@@ -227,6 +237,9 @@ public class InvoiceService {
             throw new InvalidInvoiceStateException("Cette facture est deja annulee.");
         }
         invoice.setStatus(InvoiceStatus.CANCELLED);
+        // Cancelled invoices should no longer affect the TVA ledger.
+        tvaEntryService.removeForInvoice(invoice.getId());
+        auditService.log(companyId, "INVOICE_CANCEL", "Invoice", invoice.getId());
         return buildFullResponse(invoice, companyId);
     }
 

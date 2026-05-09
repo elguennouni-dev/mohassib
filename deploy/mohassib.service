@@ -1,0 +1,29 @@
+[Unit]
+Description=Mohassib Backend (Spring Boot)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=mohassib
+Group=mohassib
+WorkingDirectory=/opt/mohassib
+EnvironmentFile=/opt/mohassib/.env
+Environment=SPRING_PROFILES_ACTIVE=prod
+Environment=LOG_DIR=/var/log/mohassib
+ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar /opt/mohassib/app.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/mohassib /var/lib/mohassib
+
+[Install]
+WantedBy=multi-user.target

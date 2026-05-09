@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import axios from 'axios'
 import { Link, useNavigate } from 'react-router-dom'
-import { AppHeader } from '../components/AppHeader'
 import { deleteClient, listClients, type Client, type Page } from '../api/clients'
 
 const PAGE_SIZE = 20
@@ -65,7 +64,6 @@ export function ClientsListPage() {
 
   return (
     <>
-      <AppHeader />
       <main className="container" style={{ padding: 'var(--space-8) var(--space-5)' }}>
         <div
           style={{

@@ -31,4 +31,6 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
             @Param("search") String search,
             Pageable pageable
     );
+
+    long countByCompanyId(Long companyId);
 }

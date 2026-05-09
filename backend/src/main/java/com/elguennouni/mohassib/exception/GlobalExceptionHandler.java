@@ -84,6 +84,36 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.NOT_FOUND, "EMPLOYEE_NOT_FOUND", ex.getMessage());
     }
 
+    @ExceptionHandler(PayrollNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handlePayrollNotFound(PayrollNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "PAYROLL_NOT_FOUND", ex.getMessage());
+    }
+
+    @ExceptionHandler(PayrollAlreadyExistsException.class)
+    public ResponseEntity<Map<String, Object>> handlePayrollAlreadyExists(PayrollAlreadyExistsException ex) {
+        return error(HttpStatus.CONFLICT, "PAYROLL_ALREADY_EXISTS", ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidPayrollStateException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidPayrollState(InvalidPayrollStateException ex) {
+        return error(HttpStatus.CONFLICT, "INVALID_PAYROLL_STATE", ex.getMessage());
+    }
+
+    @ExceptionHandler(ExpenseNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleExpenseNotFound(ExpenseNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "EXPENSE_NOT_FOUND", ex.getMessage());
+    }
+
+    @ExceptionHandler(TVADeclarationNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleTvaDeclarationNotFound(TVADeclarationNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "TVA_DECLARATION_NOT_FOUND", ex.getMessage());
+    }
+
+    @ExceptionHandler(SalarySlipNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleSlipNotFound(SalarySlipNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "SALARY_SLIP_NOT_FOUND", ex.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         List<Map<String, String>> details = ex.getBindingResult().getFieldErrors().stream()
