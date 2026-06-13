@@ -49,6 +49,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.NOT_FOUND, "INVOICE_NOT_FOUND", ex.getMessage());
     }
 
+    @ExceptionHandler(NotificationNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNotificationNotFound(NotificationNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "NOTIFICATION_NOT_FOUND", ex.getMessage());
+    }
+
     @ExceptionHandler(InvalidInvoiceStateException.class)
     public ResponseEntity<Map<String, Object>> handleInvalidInvoiceState(InvalidInvoiceStateException ex) {
         return error(HttpStatus.CONFLICT, "INVALID_INVOICE_STATE", ex.getMessage());

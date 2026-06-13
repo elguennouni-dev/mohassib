@@ -42,6 +42,7 @@ type AuthContextValue = {
   hasCompany: boolean
   isLoading: boolean
   login: (email: string, password: string) => Promise<LoginResult>
+  loginWithTokens: (accessToken: string, refreshToken: string) => Promise<LoginResult>
   register: (firstName: string, lastName: string, email: string, password: string) => Promise<void>
   logout: () => void
   setCompany: (company: Company | null) => void
@@ -95,6 +96,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { user: res.data.user, company: res.data.company }
   }, [])
 
+  const loginWithTokens = useCallback(
+    async (accessToken: string, refreshToken: string): Promise<LoginResult> => {
+      setStoredToken(accessToken)
+      setStoredRefreshToken(refreshToken)
+      const res = await apiClient.get<SessionResponse>('/auth/me')
+      setUser(res.data.user)
+      setCompanyState(res.data.company)
+      return { user: res.data.user, company: res.data.company }
+    },
+    [],
+  )
+
   const register = useCallback(
     async (firstName: string, lastName: string, email: string, password: string) => {
       await apiClient.post('/auth/register', { firstName, lastName, email, password })
@@ -122,11 +135,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hasCompany: company !== null,
       isLoading,
       login,
+      loginWithTokens,
       register,
       logout,
       setCompany,
     }),
-    [user, company, isLoading, login, register, logout, setCompany],
+    [user, company, isLoading, login, loginWithTokens, register, logout, setCompany],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

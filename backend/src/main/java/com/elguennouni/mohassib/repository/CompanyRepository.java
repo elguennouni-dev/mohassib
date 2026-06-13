@@ -12,4 +12,7 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     Optional<Company> findByUserId(Long userId);
 
     boolean existsByUserId(Long userId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT c.id, c.userId FROM Company c")
+    java.util.List<Object[]> findAllIdAndUserId();
 }

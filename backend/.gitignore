@@ -6,8 +6,9 @@ target/
 
 .env
 .env.*
+!.env.example
 application-local.properties
-application-prod.properties
+logs/
 
 ### STS ###
 .apt_generated

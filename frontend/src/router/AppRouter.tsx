@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import { LandingPage } from '../pages/LandingPage'
 import { LoginPage } from '../pages/LoginPage'
 import { RegisterPage } from '../pages/RegisterPage'
+import { OAuthCallbackPage } from '../pages/OAuthCallbackPage'
 import { DashboardPage } from '../pages/DashboardPage'
 import { CompanyOnboardingPage } from '../pages/CompanyOnboardingPage'
 import { CompanyProfilePage } from '../pages/CompanyProfilePage'
@@ -18,6 +19,7 @@ import { ExpensesListPage } from '../pages/ExpensesListPage'
 import { ExpenseFormPage } from '../pages/ExpenseFormPage'
 import { TvaPage } from '../pages/TvaPage'
 import { ReportsPage } from '../pages/ReportsPage'
+import { NotificationsPage } from '../pages/NotificationsPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { ProtectedRoute } from '../auth/ProtectedRoute'
 import { RequireCompany } from '../auth/RequireCompany'
@@ -28,6 +30,7 @@ export function AppRouter() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/connexion" element={<LoginPage />} />
       <Route path="/inscription" element={<RegisterPage />} />
+      <Route path="/auth/oauth-callback" element={<OAuthCallbackPage />} />
 
       <Route
         path="/mon-entreprise/creation"
@@ -231,6 +234,17 @@ export function AppRouter() {
           <ProtectedRoute>
             <RequireCompany>
               <ReportsPage />
+            </RequireCompany>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <RequireCompany>
+              <NotificationsPage />
             </RequireCompany>
           </ProtectedRoute>
         }

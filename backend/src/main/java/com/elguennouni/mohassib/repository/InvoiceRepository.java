@@ -205,4 +205,20 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     );
 
     java.util.List<Invoice> findTop5ByCompanyIdOrderByCreatedAtDesc(Long companyId);
+
+    @Query("""
+            SELECT COUNT(i)
+            FROM Invoice i
+            WHERE i.companyId = :companyId
+              AND i.status = com.elguennouni.mohassib.entity.InvoiceStatus.SENT
+              AND i.paymentStatus <> com.elguennouni.mohassib.entity.PaymentStatus.PAID
+              AND i.dueDate IS NOT NULL
+              AND i.dueDate >= :from
+              AND i.dueDate <= :to
+            """)
+    long countDueBetween(
+            @Param("companyId") Long companyId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to
+    );
 }

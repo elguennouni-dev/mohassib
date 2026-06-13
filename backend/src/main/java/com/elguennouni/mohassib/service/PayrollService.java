@@ -40,6 +40,7 @@ public class PayrollService {
     private final SalarySlipPdfService pdfService;
     private final EmailService emailService;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     public record SalarySlipPdf(String filename, byte[] bytes) {}
 
@@ -201,6 +202,21 @@ public class PayrollService {
                 payroll.getId(), payroll.getMonth(), payroll.getYear(), sentCount, skippedCount);
         auditService.log(companyId, "PAYROLL_PROCESS", "Payroll", payroll.getId(),
                 "sent=" + sentCount + " skipped=" + skippedCount);
+
+        int failedCount = slips.size() - sentCount - skippedCount;
+        if (failedCount > 0) {
+            notificationService.create(
+                    companyId,
+                    company.getUserId(),
+                    com.elguennouni.mohassib.entity.NotificationType.EMAIL_SEND_FAILURE,
+                    "Echec d'envoi de bulletins",
+                    failedCount == 1
+                            ? "Un bulletin de paie n'a pas pu etre envoye par email."
+                            : failedCount + " bulletins de paie n'ont pas pu etre envoyes par email.",
+                    "/paie/" + payroll.getId(),
+                    "EMAIL_SEND_FAILURE:payroll:" + payroll.getId() + ":" + now.toLocalDate()
+            );
+        }
 
         List<SalarySlip> refreshed = slipRepository
                 .findByPayrollIdOrderByEmployeeLastNameAscEmployeeFirstNameAsc(payroll.getId());

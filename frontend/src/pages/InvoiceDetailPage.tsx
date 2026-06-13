@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import axios from 'axios'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Modal } from '../components/Modal'
-import { StatusBadge } from './InvoicesListPage'
+import { StatusBadge } from '../components/ui'
 import {
   cancelInvoice,
   deleteInvoice,

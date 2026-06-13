@@ -1,12 +1,38 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import axios from 'axios'
 import { Link } from 'react-router-dom'
+import {
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  Banknote,
+  Calculator,
+  Clock3,
+  FilePlus2,
+  FileText,
+  Receipt,
+  TrendingUp,
+  UserPlus,
+  Users,
+  Wallet,
+} from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
-import { getDashboardKpis, type DashboardKpis, type RevenueDataPoint, type RecentInvoiceItem } from '../api/reports'
+import {
+  getDashboardKpis,
+  type DashboardKpis,
+  type RecentInvoiceItem,
+  type RevenueDataPoint,
+} from '../api/reports'
+import { StatusBadge } from '../components/ui/StatusBadge'
 
 const MONTH_NAMES_FR = [
   'Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin',
   'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.',
+]
+
+const FULL_MONTHS_FR = [
+  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
 ]
 
 export function DashboardPage() {
@@ -39,390 +65,494 @@ export function DashboardPage() {
     }
   }, [])
 
+  const now = new Date()
+  const periodLabel = `${FULL_MONTHS_FR[now.getMonth()]} ${now.getFullYear()}`
+
   return (
-    <>
-      <main className="container" style={{ padding: 'var(--space-8) var(--space-5)' }}>
-        <div style={{ marginBottom: 'var(--space-6)' }}>
-          <h1 style={{ marginBottom: 'var(--space-2)' }}>Tableau de bord</h1>
-          <p style={{ color: 'var(--color-text-muted)' }}>
-            Bonjour{user ? ` ${user.firstName}` : ''}, voici l'aperçu de votre activité.
-          </p>
-        </div>
+    <main className="container" style={{ padding: 'var(--space-8) var(--space-5)' }}>
+      <DashboardHero firstName={user?.firstName ?? null} periodLabel={periodLabel} />
 
-        {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error" style={{ marginBottom: 'var(--space-5)' }}>{error}</div>}
 
-        {loading && <p style={{ color: 'var(--color-text-muted)' }}>Chargement des indicateurs...</p>}
+      {loading && <KpiSkeletonGrid />}
 
-        {!loading && kpis && (
-          <>
-            {/* Top KPI strip */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: 'var(--space-3)',
-                marginBottom: 'var(--space-6)',
-              }}
-            >
-              <KpiCard
-                label="Chiffre d'affaires du mois"
-                value={formatMoneyMAD(kpis.revenueMtd)}
-                hint={`YTD : ${formatMoneyMAD(kpis.revenueYtd)}`}
-                tone="primary"
-              />
-              <KpiCard
-                label="Factures en retard"
-                value={`${kpis.overdueCount}`}
-                hint={formatMoneyMAD(kpis.overdueAmount)}
-                tone={kpis.overdueCount > 0 ? 'danger' : 'neutral'}
-              />
-              <KpiCard
-                label="En attente de paiement"
-                value={`${kpis.outstandingCount}`}
-                hint={formatMoneyMAD(kpis.outstandingAmount)}
-                tone="neutral"
-              />
-              <KpiCard
-                label={Number(kpis.tvaToPayMonth) < 0 ? 'Crédit de TVA (mois)' : 'TVA à payer (mois)'}
-                value={formatMoneyMAD(Math.abs(Number(kpis.tvaToPayMonth)))}
-                hint={`Collectée : ${formatMoneyMAD(kpis.tvaCollectedMonth)}`}
-                tone={Number(kpis.tvaToPayMonth) < 0 ? 'success' : 'neutral'}
-              />
-            </div>
+      {!loading && kpis && (
+        <>
+          <KpiGrid kpis={kpis} />
 
-            {/* Two-column: chart + recent activity */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1fr',
-                gap: 'var(--space-5)',
-                marginBottom: 'var(--space-6)',
-              }}
-            >
-              <RevenueChartCard data={kpis.monthlyRevenue} />
-              <RecentInvoicesCard invoices={kpis.recentInvoices} />
-            </div>
+          <div className="dashboard-main-row">
+            <RevenueChartCard data={kpis.monthlyRevenue} />
+            <ActionItemsCard kpis={kpis} />
+          </div>
 
-            {/* Secondary stats */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: 'var(--space-3)',
-              }}
-            >
-              <SecondaryStat
-                label="Masse salariale"
-                primary={formatMoneyMAD(kpis.payrollCostYtd)}
-                secondary={`Mois : ${formatMoneyMAD(kpis.payrollCostMtd)}`}
-              />
-              <SecondaryStat
-                label="Dépenses YTD (HT)"
-                primary={formatMoneyMAD(kpis.expensesBaseYtd)}
-                secondary={`TTC : ${formatMoneyMAD(kpis.expensesTotalYtd)}`}
-              />
-              <SecondaryStat
-                label="Clients"
-                primary={`${kpis.activeClientsCount}`}
-                secondary="actifs"
-              />
-              <SecondaryStat
-                label="Employés"
-                primary={`${kpis.activeEmployeesCount}`}
-                secondary="actifs"
-              />
-            </div>
-          </>
-        )}
-      </main>
-    </>
+          <div className="dashboard-main-row">
+            <RecentInvoicesCard invoices={kpis.recentInvoices} />
+            <SecondaryStatsCard kpis={kpis} />
+          </div>
+
+          <QuickActionsRow />
+        </>
+      )}
+    </main>
   )
 }
 
+/* ------------------------------------------------------------------ hero */
+
+function DashboardHero({ firstName, periodLabel }: { firstName: string | null; periodLabel: string }) {
+  return (
+    <div className="dashboard-hero">
+      <div>
+        <h1 style={{ marginBottom: 'var(--space-2)' }}>
+          Bonjour{firstName ? ` ${firstName}` : ''}
+        </h1>
+        <p style={{ color: 'var(--color-text-muted)' }}>
+          Aperçu de votre activité pour <strong>{periodLabel}</strong>.
+        </p>
+      </div>
+      <div className="dashboard-hero-actions">
+        <Link to="/factures/nouveau" className="btn btn-primary">
+          <FilePlus2 size={16} aria-hidden="true" />
+          <span>Nouvelle facture</span>
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+/* ----------------------------------------------------------- KPI section */
+
+function KpiGrid({ kpis }: { kpis: DashboardKpis }) {
+  const trend = computeMonthOverMonthTrend(kpis.monthlyRevenue)
+  const tvaIsCredit = Number(kpis.tvaToPayMonth) < 0
+  const tvaAbs = Math.abs(Number(kpis.tvaToPayMonth || 0))
+
+  return (
+    <div className="dashboard-kpi-grid">
+      <KpiCard
+        icon={<TrendingUp size={18} aria-hidden="true" />}
+        label="Chiffre d'affaires du mois"
+        value={formatMoneyMAD(kpis.revenueMtd)}
+        hint={`Année : ${formatMoneyMAD(kpis.revenueYtd)}`}
+        tone="primary"
+        trend={trend}
+        sparkline={kpis.monthlyRevenue}
+      />
+      <KpiCard
+        icon={<AlertTriangle size={18} aria-hidden="true" />}
+        label="Factures en retard"
+        value={String(kpis.overdueCount)}
+        hint={formatMoneyMAD(kpis.overdueAmount)}
+        tone={kpis.overdueCount > 0 ? 'danger' : 'neutral'}
+      />
+      <KpiCard
+        icon={<Clock3 size={18} aria-hidden="true" />}
+        label="En attente de paiement"
+        value={String(kpis.outstandingCount)}
+        hint={formatMoneyMAD(kpis.outstandingAmount)}
+        tone="neutral"
+      />
+      <KpiCard
+        icon={<Calculator size={18} aria-hidden="true" />}
+        label={tvaIsCredit ? 'Crédit de TVA (mois)' : 'TVA à payer (mois)'}
+        value={formatMoneyMAD(tvaAbs)}
+        hint={`Collectée : ${formatMoneyMAD(kpis.tvaCollectedMonth)}`}
+        tone={tvaIsCredit ? 'success' : 'neutral'}
+      />
+    </div>
+  )
+}
+
+type KpiTone = 'neutral' | 'primary' | 'success' | 'danger'
+
+type TrendInfo = { direction: 'up' | 'down' | 'flat'; percent: number }
+
 function KpiCard({
+  icon,
   label,
   value,
   hint,
-  tone = 'neutral',
+  tone,
+  trend,
+  sparkline,
 }: {
+  icon: ReactNode
   label: string
   value: string
   hint?: string
-  tone?: 'neutral' | 'primary' | 'success' | 'danger'
+  tone: KpiTone
+  trend?: TrendInfo | null
+  sparkline?: RevenueDataPoint[]
 }) {
-  const toneColor: Record<typeof tone, string> = {
-    neutral: 'var(--color-text)',
-    primary: 'var(--color-primary)',
-    success: 'var(--color-success)',
-    danger: 'var(--color-danger)',
-  }
   return (
-    <div
-      style={{
-        padding: 'var(--space-5)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)',
-        backgroundColor: 'var(--color-surface)',
-      }}
-    >
-      <p
-        style={{
-          color: 'var(--color-text-muted)',
-          fontSize: 'var(--font-size-xs)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.04em',
-          marginBottom: 'var(--space-2)',
-        }}
-      >
-        {label}
-      </p>
-      <p
-        style={{
-          fontSize: '1.6rem',
-          fontWeight: 700,
-          color: toneColor[tone],
-          fontVariantNumeric: 'tabular-nums',
-          marginBottom: hint ? 'var(--space-1)' : 0,
-        }}
-      >
-        {value}
-      </p>
-      {hint && (
-        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)' }}>
-          {hint}
-        </p>
-      )}
+    <div className={`kpi-card kpi-card-${tone}`}>
+      <div className="kpi-card-header">
+        <span className="kpi-card-icon" aria-hidden="true">{icon}</span>
+        <span className="kpi-card-label">{label}</span>
+      </div>
+      <div className="kpi-card-value">{value}</div>
+      <div className="kpi-card-footer">
+        {hint && <span className="kpi-card-hint">{hint}</span>}
+        {trend && trend.direction !== 'flat' && (
+          <span className={`kpi-card-trend kpi-card-trend-${trend.direction === 'up' ? 'pos' : 'neg'}`}>
+            {trend.direction === 'up'
+              ? <ArrowUpRight size={14} aria-hidden="true" />
+              : <ArrowDownRight size={14} aria-hidden="true" />}
+            {Math.abs(trend.percent).toFixed(0)}%
+          </span>
+        )}
+      </div>
+      {sparkline && sparkline.length > 1 && <Sparkline data={sparkline} />}
     </div>
   )
 }
 
-function SecondaryStat({
-  label,
-  primary,
-  secondary,
-}: {
-  label: string
-  primary: string
-  secondary: string
-}) {
+function Sparkline({ data }: { data: RevenueDataPoint[] }) {
+  const values = data.map((d) => Number(d.revenue))
+  const max = Math.max(1, ...values)
+  const min = Math.min(0, ...values)
+  const range = Math.max(1, max - min)
+  const width = 100
+  const height = 28
+  const stepX = values.length > 1 ? width / (values.length - 1) : 0
+  const points = values
+    .map((v, i) => {
+      const x = i * stepX
+      const y = height - ((v - min) / range) * height
+      return `${x.toFixed(2)},${y.toFixed(2)}`
+    })
+    .join(' ')
   return (
-    <div
-      style={{
-        padding: 'var(--space-4)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-md)',
-        backgroundColor: 'var(--color-surface)',
-      }}
+    <svg
+      className="kpi-card-sparkline"
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      aria-hidden="true"
     >
-      <p
-        style={{
-          color: 'var(--color-text-muted)',
-          fontSize: 'var(--font-size-xs)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.04em',
-          marginBottom: 'var(--space-1)',
-        }}
-      >
-        {label}
-      </p>
-      <p style={{ fontSize: '1.15rem', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-        {primary}
-      </p>
-      <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)' }}>
-        {secondary}
-      </p>
+      <polyline
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={points}
+      />
+    </svg>
+  )
+}
+
+function KpiSkeletonGrid() {
+  return (
+    <div className="dashboard-kpi-grid" aria-hidden="true">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="kpi-card kpi-card-neutral">
+          <div className="kpi-card-header">
+            <span className="skeleton skeleton-icon" />
+            <span className="skeleton skeleton-text-sm" />
+          </div>
+          <div className="skeleton skeleton-text-xl" />
+          <div className="skeleton skeleton-text-sm" />
+        </div>
+      ))}
     </div>
   )
 }
+
+/* ------------------------------------------------------- revenue chart */
 
 function RevenueChartCard({ data }: { data: RevenueDataPoint[] }) {
   const values = data.map((d) => Number(d.revenue))
-  const maxValue = Math.max(1, ...values)
+  const max = Math.max(...values, 0)
+  const niceMax = niceCeiling(max)
   const total = values.reduce((a, b) => a + b, 0)
 
   return (
-    <div
-      style={{
-        padding: 'var(--space-5)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)',
-        backgroundColor: 'var(--color-surface)',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'baseline',
-          marginBottom: 'var(--space-4)',
-        }}
-      >
+    <section className="dashboard-card">
+      <div className="card-header">
         <h2 style={{ marginBottom: 0 }}>Chiffre d'affaires — 12 derniers mois</h2>
-        <span
-          style={{
-            color: 'var(--color-text-muted)',
-            fontSize: 'var(--font-size-sm)',
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
-          Total : {formatMoneyMAD(total)}
-        </span>
+        <span className="card-header-meta">Total : {formatMoneyMAD(total)}</span>
       </div>
 
       {total === 0 ? (
-        <p
-          style={{
-            padding: 'var(--space-6)',
-            textAlign: 'center',
-            color: 'var(--color-text-muted)',
-            fontSize: 'var(--font-size-sm)',
-          }}
-        >
-          Aucune facture sur les 12 derniers mois. Les données apparaîtront ici dès la première facture envoyée.
-        </p>
+        <EmptyBlock message="Aucune facture sur les 12 derniers mois. Les données apparaîtront ici dès la première facture envoyée." />
       ) : (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-end',
-            gap: 'var(--space-2)',
-            height: 200,
-            paddingBottom: 'var(--space-4)',
-          }}
-        >
+        <BarChart data={data} niceMax={niceMax} />
+      )}
+    </section>
+  )
+}
+
+function BarChart({ data, niceMax }: { data: RevenueDataPoint[]; niceMax: number }) {
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map((p) => p * niceMax)
+
+  return (
+    <div className="bar-chart-wrapper">
+      <div className="bar-chart-y-axis">
+        {[...gridLines].reverse().map((v) => (
+          <span key={v} className="bar-chart-y-label">{formatCompactMAD(v)}</span>
+        ))}
+      </div>
+      <div className="bar-chart-body">
+        <div className="bar-chart-gridlines" aria-hidden="true">
+          {gridLines.map((v) => <span key={v} />)}
+        </div>
+        <div className="bar-chart-bars">
           {data.map((point) => {
             const value = Number(point.revenue)
-            const heightPct = maxValue > 0 ? (value / maxValue) * 100 : 0
+            const heightPct = niceMax > 0 ? (value / niceMax) * 100 : 0
+            const tooltip = `${MONTH_NAMES_FR[point.month - 1]} ${point.year} — ${formatMoneyMAD(value)}`
             return (
-              <div
-                key={`${point.year}-${point.month}`}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  height: '100%',
-                }}
-                title={`${MONTH_NAMES_FR[point.month - 1]} ${point.year} — ${formatMoneyMAD(value)}`}
-              >
-                <div
-                  style={{
-                    flex: 1,
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                  }}
-                >
+              <div key={`${point.year}-${point.month}`} className="bar-chart-col" title={tooltip}>
+                <div className="bar-chart-bar-track">
                   <div
-                    style={{
-                      width: '100%',
-                      height: `${heightPct}%`,
-                      minHeight: value > 0 ? 2 : 0,
-                      backgroundColor: 'var(--color-primary)',
-                      borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
-                      transition: 'height 0.3s ease',
-                    }}
+                    className="bar-chart-bar-fill"
+                    style={{ height: `${heightPct}%`, minHeight: value > 0 ? 2 : 0 }}
                   />
                 </div>
-                <span
-                  style={{
-                    fontSize: 'var(--font-size-xs)',
-                    color: 'var(--color-text-muted)',
-                  }}
-                >
-                  {MONTH_NAMES_FR[point.month - 1]}
-                </span>
+                <span className="bar-chart-x-label">{MONTH_NAMES_FR[point.month - 1]}</span>
               </div>
             )
           })}
         </div>
-      )}
+      </div>
     </div>
   )
 }
 
+/* ---------------------------------------------------------- action items */
+
+type ActionItem = {
+  key: string
+  icon: ReactNode
+  title: string
+  description: string
+  link: string
+  tone: 'neutral' | 'warning' | 'danger' | 'success'
+}
+
+function buildActionItems(kpis: DashboardKpis): ActionItem[] {
+  const items: ActionItem[] = []
+  const tvaToPay = Number(kpis.tvaToPayMonth || 0)
+
+  if (kpis.overdueCount > 0) {
+    items.push({
+      key: 'overdue',
+      icon: <AlertTriangle size={16} aria-hidden="true" />,
+      title: kpis.overdueCount === 1
+        ? '1 facture en retard'
+        : `${kpis.overdueCount} factures en retard`,
+      description: `${formatMoneyMAD(kpis.overdueAmount)} à recouvrer.`,
+      link: '/factures',
+      tone: 'danger',
+    })
+  }
+  if (kpis.outstandingCount > 0 && kpis.outstandingCount !== kpis.overdueCount) {
+    const open = kpis.outstandingCount - kpis.overdueCount
+    items.push({
+      key: 'outstanding',
+      icon: <Clock3 size={16} aria-hidden="true" />,
+      title: open === 1 ? '1 facture en attente' : `${open} factures en attente`,
+      description: 'Suivez les paiements en cours.',
+      link: '/factures',
+      tone: 'warning',
+    })
+  }
+  if (tvaToPay > 0) {
+    items.push({
+      key: 'tva',
+      icon: <Calculator size={16} aria-hidden="true" />,
+      title: 'TVA à déclarer',
+      description: `${formatMoneyMAD(tvaToPay)} à régler pour le mois.`,
+      link: '/tva',
+      tone: 'warning',
+    })
+  }
+  if (tvaToPay < 0) {
+    items.push({
+      key: 'tva-credit',
+      icon: <Calculator size={16} aria-hidden="true" />,
+      title: 'Crédit de TVA',
+      description: `${formatMoneyMAD(Math.abs(tvaToPay))} reportable.`,
+      link: '/tva',
+      tone: 'success',
+    })
+  }
+  if (Number(kpis.revenueMtd) === 0) {
+    items.push({
+      key: 'no-revenue',
+      icon: <FilePlus2 size={16} aria-hidden="true" />,
+      title: 'Aucune facture ce mois-ci',
+      description: 'Créez votre première facture du mois.',
+      link: '/factures/nouveau',
+      tone: 'neutral',
+    })
+  }
+  return items
+}
+
+function ActionItemsCard({ kpis }: { kpis: DashboardKpis }) {
+  const items = buildActionItems(kpis)
+  return (
+    <section className="dashboard-card">
+      <div className="card-header">
+        <h2 style={{ marginBottom: 0 }}>À faire</h2>
+        <Link to="/notifications" className="card-header-link">Voir notifications</Link>
+      </div>
+
+      {items.length === 0 ? (
+        <EmptyBlock message="Rien d'urgent. Tout est à jour pour le moment." />
+      ) : (
+        <ul className="action-list">
+          {items.map((item) => (
+            <li key={item.key}>
+              <Link to={item.link} className={`action-item action-item-${item.tone}`}>
+                <span className="action-item-icon" aria-hidden="true">{item.icon}</span>
+                <span className="action-item-body">
+                  <span className="action-item-title">{item.title}</span>
+                  <span className="action-item-desc">{item.description}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+/* -------------------------------------------------------- recent invoices */
+
 function RecentInvoicesCard({ invoices }: { invoices: RecentInvoiceItem[] }) {
   return (
-    <div
-      style={{
-        padding: 'var(--space-5)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)',
-        backgroundColor: 'var(--color-surface)',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 'var(--space-4)',
-        }}
-      >
+    <section className="dashboard-card">
+      <div className="card-header">
         <h2 style={{ marginBottom: 0 }}>Activité récente</h2>
-        <Link to="/factures" style={{ fontSize: 'var(--font-size-sm)' }}>
-          Voir tout
-        </Link>
+        <Link to="/factures" className="card-header-link">Voir tout</Link>
       </div>
 
       {invoices.length === 0 ? (
-        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
-          Aucune facture pour le moment.
-        </p>
+        <EmptyBlock message="Aucune facture pour le moment." />
       ) : (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 'var(--space-3)' }}>
+        <ul className="recent-list">
           {invoices.map((inv) => (
-            <li
-              key={inv.id}
-              style={{
-                paddingBottom: 'var(--space-3)',
-                borderBottom: '1px solid var(--color-border-subtle)',
-              }}
-            >
-              <Link
-                to={`/factures/${inv.id}`}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'baseline',
-                  gap: 'var(--space-3)',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                }}
-              >
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
-                    {inv.invoiceNumber}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 'var(--font-size-xs)',
-                      color: 'var(--color-text-muted)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
+            <li key={inv.id}>
+              <Link to={`/factures/${inv.id}`} className="recent-item">
+                <div className="recent-item-primary">
+                  <span className="recent-item-number">{inv.invoiceNumber}</span>
+                  <span className="recent-item-meta">
                     {inv.clientName} · {formatDate(inv.invoiceDate)}
-                  </div>
+                  </span>
                 </div>
-                <div
-                  style={{
-                    fontWeight: 600,
-                    fontVariantNumeric: 'tabular-nums',
-                    fontSize: 'var(--font-size-sm)',
-                  }}
-                >
-                  {formatMoneyMAD(inv.totalAmount)}
+                <div className="recent-item-secondary">
+                  <StatusBadge status={inv.status} />
+                  <span className="recent-item-amount">{formatMoneyMAD(inv.totalAmount)}</span>
                 </div>
               </Link>
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </section>
   )
+}
+
+/* ------------------------------------------------------ secondary stats */
+
+function SecondaryStatsCard({ kpis }: { kpis: DashboardKpis }) {
+  const stats = [
+    {
+      icon: <Banknote size={16} aria-hidden="true" />,
+      label: 'Masse salariale',
+      primary: formatMoneyMAD(kpis.payrollCostYtd),
+      secondary: `Mois : ${formatMoneyMAD(kpis.payrollCostMtd)}`,
+    },
+    {
+      icon: <Receipt size={16} aria-hidden="true" />,
+      label: 'Dépenses HT (année)',
+      primary: formatMoneyMAD(kpis.expensesBaseYtd),
+      secondary: `TTC : ${formatMoneyMAD(kpis.expensesTotalYtd)}`,
+    },
+    {
+      icon: <Users size={16} aria-hidden="true" />,
+      label: 'Clients',
+      primary: String(kpis.activeClientsCount),
+      secondary: 'actifs',
+    },
+    {
+      icon: <Wallet size={16} aria-hidden="true" />,
+      label: 'Employés',
+      primary: String(kpis.activeEmployeesCount),
+      secondary: 'actifs',
+    },
+  ]
+  return (
+    <section className="dashboard-card">
+      <div className="card-header">
+        <h2 style={{ marginBottom: 0 }}>Indicateurs secondaires</h2>
+      </div>
+      <div className="secondary-stat-grid">
+        {stats.map((s) => (
+          <div key={s.label} className="secondary-stat">
+            <span className="secondary-stat-icon" aria-hidden="true">{s.icon}</span>
+            <div>
+              <span className="secondary-stat-label">{s.label}</span>
+              <span className="secondary-stat-value">{s.primary}</span>
+              <span className="secondary-stat-meta">{s.secondary}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/* --------------------------------------------------------- quick actions */
+
+function QuickActionsRow() {
+  const actions = [
+    { to: '/factures/nouveau', label: 'Nouvelle facture', icon: <FileText size={16} aria-hidden="true" /> },
+    { to: '/clients/nouveau', label: 'Nouveau client', icon: <UserPlus size={16} aria-hidden="true" /> },
+    { to: '/depenses/nouvelle', label: 'Nouvelle dépense', icon: <Receipt size={16} aria-hidden="true" /> },
+    { to: '/paie', label: 'Préparer la paie', icon: <Banknote size={16} aria-hidden="true" /> },
+  ]
+  return (
+    <section className="quick-actions-row" aria-label="Actions rapides">
+      {actions.map((a) => (
+        <Link key={a.to} to={a.to} className="quick-action">
+          <span className="quick-action-icon" aria-hidden="true">{a.icon}</span>
+          <span>{a.label}</span>
+        </Link>
+      ))}
+    </section>
+  )
+}
+
+/* ------------------------------------------------------------- helpers */
+
+function EmptyBlock({ message }: { message: string }) {
+  return <p className="card-empty">{message}</p>
+}
+
+function computeMonthOverMonthTrend(data: RevenueDataPoint[]): TrendInfo | null {
+  if (data.length < 2) return null
+  const sorted = [...data]
+  const current = Number(sorted[sorted.length - 1].revenue)
+  const previous = Number(sorted[sorted.length - 2].revenue)
+  if (previous <= 0) {
+    if (current > 0) return { direction: 'up', percent: 100 }
+    return null
+  }
+  const change = ((current - previous) / previous) * 100
+  if (Math.abs(change) < 0.5) return { direction: 'flat', percent: 0 }
+  return { direction: change >= 0 ? 'up' : 'down', percent: change }
+}
+
+function niceCeiling(value: number): number {
+  if (value <= 0) return 1
+  const magnitude = Math.pow(10, Math.floor(Math.log10(value)))
+  const ratio = value / magnitude
+  const nice = ratio <= 1 ? 1 : ratio <= 2 ? 2 : ratio <= 5 ? 5 : 10
+  return nice * magnitude
 }
 
 function formatMoneyMAD(value: string | number | null | undefined): string {
@@ -435,9 +565,17 @@ function formatMoneyMAD(value: string | number | null | undefined): string {
   }).format(n) + ' MAD'
 }
 
+function formatCompactMAD(value: number): string {
+  if (!Number.isFinite(value) || value === 0) return '0'
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace('.', ',')} M`
+  if (value >= 1_000) return `${Math.round(value / 1_000)} k`
+  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(value)
+}
+
 function formatDate(value: string | null): string {
   if (!value) return '—'
   const d = new Date(value)
   if (isNaN(d.getTime())) return value
   return d.toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
+

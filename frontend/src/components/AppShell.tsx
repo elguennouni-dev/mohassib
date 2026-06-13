@@ -13,6 +13,7 @@ import {
   LogOut,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
+import { NotificationBell } from './NotificationBell'
 
 const navItems = [
   { to: '/tableau-de-bord', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -97,7 +98,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <div className="app-content-wrapper">{children}</div>
+      <div className="app-content-wrapper">
+        <header className="app-topbar">
+          <NotificationBell />
+        </header>
+        {children}
+      </div>
     </div>
   )
 }
